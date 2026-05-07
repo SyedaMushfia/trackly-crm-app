@@ -27,34 +27,6 @@ The app is built as a full-stack Next.js application using the App Router:
 - Database — Supabase (Postgres) as the persistent data store
 - Auth — NextAuth with email/password credentials and bcrypt-hashed passwords
 
-src/
-├── app/
-│   ├── api/
-│   │   ├── auth/[...nextauth]/route.ts
-│   │   ├── dashboard/route.ts
-│   │   ├── leads/
-│   │   │   ├── route.ts
-│   │   │   └── [id]/
-│   │   │       ├── route.ts
-│   │   │       └── notes/route.ts
-│   │   └── users/
-│   ├── dashboard/
-│   │   ├── layout.tsx
-│   │   ├── page.tsx
-│   │   |── leads/
-│   │   |    ├── page.tsx
-│   │   |    └── [id]/page.tsx
-|   |     └── pipeline/
-│   │          ├── page.tsx
-│   │     
-│   ├── login/
-│   ├── layout.tsx
-│   └── page.tsx
-├── components/
-├── lib/
-├── proxy.ts
-└── types/
-
 ## Tech Stack Used
 
 - **Framework**: Next.js 16 (App Router), React 19, TypeScript
@@ -105,11 +77,11 @@ npm install
 3. **Create local environment file**
 
 ```bash
-cp .env.example .env.local
+cp .env.local
 ```
 
 ```powershell
-Copy-Item .env.example .env.local
+Copy-Item .env.local
 ```
 
 4. **Fill environment variables** in `.env.local`  — see the Environment Variables section below.
