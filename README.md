@@ -125,15 +125,6 @@ This project uses Supabase Postgres. Follow these steps to get your database rea
   2. Run the table schema - Open the SQL Editor in your Supabase dashboard and run the following:
 
     ```sql 
-      -- Enums
-        CREATE TYPE lead_status AS ENUM (
-          'NEW', 'CONTACTED', 'QUALIFIED', 'PROPOSAL_SENT', 'WON', 'LOST'
-        );
-
-        CREATE TYPE lead_source AS ENUM (
-          'WEBSITE', 'LINKEDIN', 'REFERRAL', 'COLD_EMAIL', 'EVENT', 'OTHER'
-        );
-
       -- Users table
         CREATE TABLE users (
           id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
@@ -167,29 +158,7 @@ This project uses Supabase Postgres. Follow these steps to get your database rea
           user_id TEXT NOT NULL REFERENCES users(id),
           created_at TIMESTAMPTZ DEFAULT NOW()
         );
-
-      -- Indexes for performance
-        CREATE INDEX idx_leads_status ON leads(status);
-        CREATE INDEX idx_leads_user_id ON leads(user_id);
-        CREATE INDEX idx_leads_source ON leads(source);
-        CREATE INDEX idx_notes_lead_id ON notes(lead_id);
-
-      -- Auto-update updated_at on leads
-        CREATE OR REPLACE FUNCTION update_updated_at()
-        RETURNS TRIGGER AS $$
-        BEGIN
-          NEW.updated_at = NOW();
-          RETURN NEW;
-        END;
-        $$ LANGUAGE plpgsql;
-
-      CREATE TRIGGER leads_updated_at
-        BEFORE UPDATE ON leads
-        FOR EACH ROW EXECUTE FUNCTION update_updated_at();
-
-      CREATE TRIGGER users_updated_at
-        BEFORE UPDATE ON users
-        FOR EACH ROW EXECUTE FUNCTION update_updated_at();```
+      ```
 
   3. Seed test users- Run this in the SQL Editor to insert the five demo users with pre-hashed passwords:
   
