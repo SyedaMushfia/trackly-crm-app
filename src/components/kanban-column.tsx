@@ -36,11 +36,11 @@ export function KanbanColumn({ status, leads, onNoteAdded }: KanbanColumnProps) 
             {leads.length}
           </span>
         </div>
-        {totalValue > 0 && (
+        {/* {totalValue > 0 && (
           <span className="text-xs text-gray-400 font-medium">
             ${totalValue.toLocaleString()}
           </span>
-        )}
+        )} */}
       </div>
       <div className="-mx-2 px-2 flex-1">
          {/* Droppable container */}
