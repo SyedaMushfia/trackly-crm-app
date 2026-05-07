@@ -27,34 +27,6 @@ The app is built as a full-stack Next.js application using the App Router:
 - Database — Supabase (Postgres) as the persistent data store
 - Auth — NextAuth with email/password credentials and bcrypt-hashed passwords
 
-src/
-├── app/
-│   ├── api/
-│   │   ├── auth/[...nextauth]/route.ts
-│   │   ├── dashboard/route.ts
-│   │   ├── leads/
-│   │   │   ├── route.ts
-│   │   │   └── [id]/
-│   │   │       ├── route.ts
-│   │   │       └── notes/route.ts
-│   │   └── users/
-│   ├── dashboard/
-│   │   ├── layout.tsx
-│   │   ├── page.tsx
-│   │   |── leads/
-│   │   |    ├── page.tsx
-│   │   |    └── [id]/page.tsx
-|   |     └── pipeline/
-│   │          ├── page.tsx
-│   │     
-│   ├── login/
-│   ├── layout.tsx
-│   └── page.tsx
-├── components/
-├── lib/
-├── proxy.ts
-└── types/
-
 ## Tech Stack Used
 
 - **Framework**: Next.js 16 (App Router), React 19, TypeScript
@@ -149,8 +121,8 @@ npm run dev
 ## Database Setup
 
 This project uses Supabase Postgres. Follow these steps to get your database ready:
-1. Create a Supabase project - Go to `supabase.com`, create a new project, and wait for it to provision.
-2. Run the table schema - Open the SQL Editor in your Supabase dashboard and run the following:
+  1. Create a Supabase project - Go to `supabase.com`, create a new project, and wait for it to provision.
+  2. Run the table schema - Open the SQL Editor in your Supabase dashboard and run the following:
 
     ```sql 
       -- Enums
@@ -219,30 +191,31 @@ This project uses Supabase Postgres. Follow these steps to get your database rea
         BEFORE UPDATE ON users
         FOR EACH ROW EXECUTE FUNCTION update_updated_at();```
 
-3. Seed test users- Run this in the SQL Editor to insert the five demo users with pre-hashed passwords:
+  3. Seed test users- Run this in the SQL Editor to insert the five demo users with pre-hashed passwords:
+  
+      ```sql  
+        INSERT INTO users (id, name, email, password) VALUES
+        (gen_random_uuid()::text, 'Sarah Mitchell', 'sarah.mitchell@example.com', '$2b$12$IXe2zINZ6LmRDxSnhlM/Ru3AXvhV3gzLAoCWQOPBb/lCjOFLgEzN2'),
+        
+        (gen_random_uuid()::text, 'James Carter',   'james.carter@example.com',   '$2b$12$8fYigbg4hCqgKkTOQ03Ib.MX5eE9WCUfJPs9RsPkl7zH/LI0Tu5Mm'),
+  
+        (gen_random_uuid()::text, 'Priya Nair',     'priya.nair@example.com',     '$2b$12$PR9YVkB5JBo5fMm5sx5rAugo37YZOkOtdWPvS.edBgwVluy.M877a'),
+  
+        (gen_random_uuid()::text, 'Daniel Osei',    'daniel.osei@example.com',    '$2b$12$icZZYd729odi7Y6y9hht3ueMHBb.j4kFqnqROW2OoG7s0Ol043GQ2'),
+        
+        (gen_random_uuid()::text, 'Emily Zhang',    'emily.zhang@example.com',    '$2b$12$Fu9l.BlrhIR3aMMPLRrT4ONEAg9jzTmw999iFkl83llzO5maZn4ry');
+    ```
+  4. Copy your connection strings
+      In Supabase go to Project Settings and get the Connection string:
+  
+      - Copy the pooled connection string → DATABASE_URL
+      - Copy the direct connection string → DIRECT_URL
+  
+      In Project Settings → API:
+  
+      - Copy the Project URL → NEXT_PUBLIC_SUPABASE_URL
+      - Copy the service_role key → SUPABASE_SERVICE_ROLE_KEY
 
-    ```sql  
-      INSERT INTO users (id, name, email, password) VALUES
-      (gen_random_uuid()::text, 'Sarah Mitchell', 'sarah.mitchell@example.com', '$2b$12$IXe2zINZ6LmRDxSnhlM/Ru3AXvhV3gzLAoCWQOPBb/lCjOFLgEzN2'),
-      
-      (gen_random_uuid()::text, 'James Carter',   'james.carter@example.com',   '$2b$12$8fYigbg4hCqgKkTOQ03Ib.MX5eE9WCUfJPs9RsPkl7zH/LI0Tu5Mm'),
-
-      (gen_random_uuid()::text, 'Priya Nair',     'priya.nair@example.com',     '$2b$12$PR9YVkB5JBo5fMm5sx5rAugo37YZOkOtdWPvS.edBgwVluy.M877a'),
-
-      (gen_random_uuid()::text, 'Daniel Osei',    'daniel.osei@example.com',    '$2b$12$icZZYd729odi7Y6y9hht3ueMHBb.j4kFqnqROW2OoG7s0Ol043GQ2'),
-      
-      (gen_random_uuid()::text, 'Emily Zhang',    'emily.zhang@example.com',    '$2b$12$Fu9l.BlrhIR3aMMPLRrT4ONEAg9jzTmw999iFkl83llzO5maZn4ry');
-  ```
-4. Copy your connection strings
-    In Supabase go to Project Settings and get the Connection string:
-
-    - Copy the pooled connection string → DATABASE_URL
-    - Copy the direct connection string → DIRECT_URL
-
-    In Project Settings → API:
-
-    - Copy the Project URL → NEXT_PUBLIC_SUPABASE_URL
-    - Copy the service_role key → SUPABASE_SERVICE_ROLE_KEY
 
 ## Test Login Credentials
 
