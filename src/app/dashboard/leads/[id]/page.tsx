@@ -212,7 +212,7 @@ export default function LeadDetailPage() {
                   </div>
                   <div>
                     <p className="text-xs text-gray-400">{label}</p>
-                    <p className="text-gray-900 font-medium capitalize">{value}</p>
+                    <p className="text-gray-900 font-medium">{value}</p>
                   </div>
                 </div>
               ))}
