@@ -94,6 +94,14 @@ export default function PipelinePage() {
 
       if (!res.ok) throw new Error();
 
+      if (typeof window !== "undefined" && window.pendo) {
+        window.pendo.track("lead_pipeline_stage_changed", {
+          leadId,
+          previousStatus: currentLead.status,
+          newStatus: targetStatus,
+          deal_value: String(currentLead.deal_value),
+        });
+      }
       toast.success(`Moved to ${targetStatus.replace(/_/g, " ")}`);
     } catch {
       toast.error("Failed to update status");

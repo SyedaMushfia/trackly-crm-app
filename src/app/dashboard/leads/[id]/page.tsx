@@ -109,6 +109,13 @@ export default function LeadDetailPage() {
 
       if (!res.ok) throw new Error("Failed to add note");
 
+      if (typeof window !== "undefined" && window.pendo) {
+        window.pendo.track("note_added", {
+          leadId: id,
+          noteLength: noteContent.trim().length,
+          submissionMethod: "detail_page_form",
+        });
+      }
       setNoteContent("");
       toast.success("Note added");
       fetchLead(); // refresh to show new note

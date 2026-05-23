@@ -54,13 +54,37 @@ export default function LoginPage() {
       });
 
       if (result?.error) {
+        if (typeof window !== "undefined" && window.pendo) {
+          window.pendo.track("user_logged_in", {
+            email: values.email,
+            loginMethod: "credentials",
+            success: false,
+            errorType: "invalid_credentials",
+          });
+        }
         toast.error("Invalid email or password");
       } else {
+        if (typeof window !== "undefined" && window.pendo) {
+          window.pendo.track("user_logged_in", {
+            email: values.email,
+            loginMethod: "credentials",
+            success: true,
+            errorType: "",
+          });
+        }
         toast.success("Welcome back!");
         router.push("/dashboard");
         router.refresh();
       }
     } catch {
+      if (typeof window !== "undefined" && window.pendo) {
+        window.pendo.track("user_logged_in", {
+          email: values.email,
+          loginMethod: "credentials",
+          success: false,
+          errorType: "exception",
+        });
+      }
       toast.error("Something went wrong. Please try again.");
     } finally {
       setIsLoading(false);

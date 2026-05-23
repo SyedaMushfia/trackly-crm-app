@@ -26,6 +26,12 @@ export function DeleteDialog({ open, onClose, leadId, leadName, onSuccess }: Del
     try {
       const res = await fetch(`/api/leads/${leadId}`, { method: "DELETE" });
       if (!res.ok) throw new Error("Failed to delete lead");
+      if (typeof window !== "undefined" && window.pendo) {
+        window.pendo.track("lead_deleted", {
+          leadId,
+          leadName,
+        });
+      }
       toast.success("Lead deleted");
       onSuccess();
       onClose();

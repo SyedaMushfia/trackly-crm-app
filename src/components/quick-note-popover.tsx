@@ -38,6 +38,14 @@ export function QuickNotePopover({
         body: JSON.stringify({ content: content.trim() }),
       });
       if (!res.ok) throw new Error("Failed to add note");
+      if (typeof window !== "undefined" && window.pendo) {
+        window.pendo.track("quick_note_added", {
+          leadId,
+          leadName,
+          noteLength: content.trim().length,
+          sourceView: "quick_popover",
+        });
+      }
       toast.success("Note added");
 
        // Reset form after success

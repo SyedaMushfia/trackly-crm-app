@@ -39,6 +39,54 @@ export function LeadDialog({ open, onClose, lead, users, onSuccess }: LeadDialog
       }
 
       toast.success(lead ? "Lead updated!" : "Lead created!");
+
+      if (typeof window !== "undefined" && window.pendo) {
+        if (lead) {
+          // Track lead updated
+          window.pendo.track("lead_updated", {
+            leadId: lead.id,
+            source: values.source,
+            status: values.status,
+            deal_value: String(values.deal_value),
+            user_id: values.user_id || "",
+            company: values.company,
+          });
+
+          // Track lead assignment if user_id changed
+          if (values.user_id && values.user_id !== lead.user_id) {
+            window.pendo.track("lead_assigned", {
+              leadId: lead.id,
+              assignedUserId: values.user_id,
+              previousUserId: lead.user_id || "",
+              isReassignment: true,
+              source: values.source,
+              deal_value: String(values.deal_value),
+            });
+          }
+        } else {
+          // Track lead created
+          window.pendo.track("lead_created", {
+            source: values.source,
+            status: values.status,
+            deal_value: String(values.deal_value),
+            user_id: values.user_id || "",
+            company: values.company,
+          });
+
+          // Track lead assignment on creation if user_id is set
+          if (values.user_id) {
+            window.pendo.track("lead_assigned", {
+              leadId: "",
+              assignedUserId: values.user_id,
+              previousUserId: "",
+              isReassignment: false,
+              source: values.source,
+              deal_value: String(values.deal_value),
+            });
+          }
+        }
+      }
+
       onSuccess();
       onClose();
     } catch (err) {

@@ -106,7 +106,33 @@ function LeadsPageInner() {
       if (userFilter !== "ALL") params.set("user_id", userFilter);
       const res = await fetch(`/api/leads?${params.toString()}`);
       if (!res.ok) throw new Error();
-      setLeads(await res.json());
+      const data = await res.json();
+      setLeads(data);
+
+      if (typeof window !== "undefined" && window.pendo) {
+        // Track search events when a search query is active
+        if (search) {
+          window.pendo.track("leads_searched", {
+            searchQuery: search,
+            statusFilter,
+            sourceFilter,
+            userFilter,
+            resultsCount: data.length,
+          });
+        }
+
+        // Track filter changes when any filter is active
+        const hasFilters = statusFilter !== "ALL" || sourceFilter !== "ALL" || userFilter !== "ALL";
+        if (hasFilters) {
+          window.pendo.track("lead_filters_applied", {
+            statusFilter,
+            sourceFilter,
+            userFilter,
+            resultsCount: data.length,
+            hasActiveFilters: true,
+          });
+        }
+      }
     } catch {
       toast.error("Failed to load leads");
     } finally {
@@ -142,6 +168,15 @@ function LeadsPageInner() {
         body: JSON.stringify({ status: newStatus }),
       });
       if (!res.ok) throw new Error();
+      if (typeof window !== "undefined" && window.pendo) {
+        const previousStatus = leads.find((l) => l.id === leadId)?.status || "";
+        window.pendo.track("lead_status_changed", {
+          leadId,
+          previousStatus,
+          newStatus,
+          changeMethod: "inline_dropdown",
+        });
+      }
       toast.success("Status updated");
     } catch {
       toast.error("Failed to update status");
