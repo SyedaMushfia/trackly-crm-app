@@ -48,7 +48,10 @@ export default function DashboardLayout({
           <Button
             variant="ghost"
             className="w-full justify-start text-gray-600"
-            onClick={() => signOut({ callbackUrl: "/login" })}
+            onClick={() => {
+              pendo.clearSession();
+              signOut({ callbackUrl: "/login" });
+            }}
           >
             <LogOut className="mr-3 h-4 w-4 text-[#18cb96]" />
             Sign out

@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { signIn } from "next-auth/react";
+import { getSession, signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { Loader2 } from "lucide-react";
 import toast from "react-hot-toast"; 
@@ -56,6 +56,16 @@ export default function LoginPage() {
       if (result?.error) {
         toast.error("Invalid email or password");
       } else {
+        const session = await getSession();
+        if (session?.user) {
+          pendo.identify({
+            visitor: {
+              id: session.user.id,
+              email: session.user.email ?? '',
+              full_name: session.user.name ?? '',
+            },
+          });
+        }
         toast.success("Welcome back!");
         router.push("/dashboard");
         router.refresh();
