@@ -128,3 +128,8 @@
     @apply font-sans;
   }
 }
+
+.numeric-font {
+  font-family: "Inter", system-ui, sans-serif;
+  font-variant-numeric: tabular-nums;
+}
