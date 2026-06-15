@@ -11,6 +11,8 @@ export async function GET() {
   const { data, error } = await supabase
     .from("users")
     .select("id, name, email")
+    .eq("role", "salesperson")
+    .eq("active", true)
     .order("name");
 
   if (error) {
