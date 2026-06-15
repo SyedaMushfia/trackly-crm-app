@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { supabase } from "@/lib/supabase";
 import { z } from "zod";
+import { logActivity } from "@/lib/activity";
 
 const noteSchema = z.object({
   content: z.string().min(1, "Note cannot be empty"),
@@ -28,10 +29,10 @@ export async function POST(
     );
   }
 
-  // Confirm lead exists first
+  // Confirm lead exists and enforce ownership for salespeople
   const { data: lead } = await supabase
     .from("leads")
-    .select("id")
+    .select("id, user_id, name, company")
     .eq("id", id)
     .single();
 
@@ -39,19 +40,33 @@ export async function POST(
     return NextResponse.json({ error: "Lead not found" }, { status: 404 });
   }
 
+  // Salesperson can only add notes to their own leads
+  if (session.user.role === "salesperson" && lead.user_id !== session.user.id) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
+  // is_system is always false for user-submitted notes
   const { data, error } = await supabase
     .from("notes")
     .insert({
       content: parsed.data.content,
       lead_id: id,
       user_id: session.user.id,
+      is_system: false,
     })
-    .select("*, users(name)")
+    .select("*, users(id, name)")
     .single();
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
+
+  await logActivity({
+    userId: session.user.id,
+    actionType: "note_added",
+    description: `Added note to lead: ${lead.name} at ${lead.company}`,
+    leadId: id,
+  });
 
   return NextResponse.json(data, { status: 201 });
 }
