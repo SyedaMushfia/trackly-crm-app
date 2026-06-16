@@ -24,9 +24,6 @@ function FieldError({ message }: { message?: string }) {
   return <p className="text-xs text-red-500 mt-1.5">{message}</p>;
 }
 
-// Reads ?error= from URL — only fires when middleware redirects
-// a deactivated user back to login mid-session.
-// Needs Suspense because useSearchParams() requires it in App Router.
 function SessionErrorBanner() {
   const searchParams = useSearchParams();
   const error = searchParams.get("error");
@@ -85,7 +82,7 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen flex">
-      {/* ── Left panel — image + quote ── */}
+      {/* ── Left panel — image + quote (desktop only) ── */}
       <div className="hidden lg:flex lg:w-1/2 relative bg-gray-900 flex-col p-12">
         <div
           className="absolute inset-0 bg-cover bg-center bg-no-repeat"
@@ -98,28 +95,32 @@ export default function LoginPage() {
       </div>
 
       {/* ── Right panel — login form ── */}
-      <div className="flex-1 flex flex-col items-center justify-start bg-background">
+      <div className="flex-1 flex flex-col items-center justify-center bg-background px-4 py-8 sm:px-6">
         {/* Logo */}
-        <div className="w-50 h-20 mb-30 mt-4">
-          <img src="/trackly-logo.png" alt="Trackly" className="h-full w-full object-contain" />
+        <div className="w-36 sm:w-44 h-14 sm:h-18 mb-6 sm:mb-10">
+          <img
+            src="/trackly-logo.png"
+            alt="Trackly"
+            className="h-full w-full object-contain"
+          />
         </div>
 
         <div className="w-full max-w-sm">
           {/* Heading */}
-          <div className="mb-8">
-            <h1 className="text-2xl font-bold text-foreground">Welcome back</h1>
+          <div className="mb-6 sm:mb-8">
+            <h1 className="text-xl sm:text-2xl font-bold text-foreground">Welcome back</h1>
             <p className="text-muted-foreground text-sm mt-1">
               Sign in to your account to continue
             </p>
           </div>
 
-          {/* Session expired banner — only shows when middleware redirects here */}
+          {/* Session expired banner */}
           <Suspense fallback={null}>
             <SessionErrorBanner />
           </Suspense>
 
           {/* Form */}
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 sm:space-y-5">
             {/* Email */}
             <div>
               <label className="block text-sm font-medium text-foreground mb-1.5">
@@ -130,7 +131,7 @@ export default function LoginPage() {
                 placeholder="you@company.com"
                 autoComplete="email"
                 disabled={isLoading}
-                className={`h-11 ${errors.email ? "border-red-400 focus-visible:ring-red-400" : ""}`}
+                className={`h-10 sm:h-11 ${errors.email ? "border-red-400 focus-visible:ring-red-400" : ""}`}
                 {...register("email")}
               />
               <FieldError message={errors.email?.message} />
@@ -138,18 +139,16 @@ export default function LoginPage() {
 
             {/* Password */}
             <div>
-              <div className="flex items-center justify-between mb-1.5">
-                <label className="block text-sm font-medium text-foreground">
-                  Password
-                </label>
-              </div>
+              <label className="block text-sm font-medium text-foreground mb-1.5">
+                Password
+              </label>
               <div className="relative">
                 <Input
                   type={showPassword ? "text" : "password"}
                   placeholder="••••••••"
                   autoComplete="current-password"
                   disabled={isLoading}
-                  className={`h-11 pr-10 ${errors.password ? "border-red-400 focus-visible:ring-red-400" : ""}`}
+                  className={`h-10 sm:h-11 pr-10 ${errors.password ? "border-red-400 focus-visible:ring-red-400" : ""}`}
                   {...register("password")}
                 />
                 <button
@@ -171,7 +170,7 @@ export default function LoginPage() {
             {/* Submit */}
             <Button
               type="submit"
-              className="w-full h-11 font-medium"
+              className="w-full h-10 sm:h-11 font-medium"
               disabled={isLoading}
             >
               {isLoading ? (
