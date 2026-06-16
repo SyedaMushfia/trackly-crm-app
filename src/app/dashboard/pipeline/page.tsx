@@ -21,18 +21,11 @@ import toast from "react-hot-toast";
 export default function PipelinePage() {
   const [leads, setLeads] = useState<LeadWithUser[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-
-  // Tracks the currently dragged card (for DragOverlay preview)
   const [activeId, setActiveId] = useState<string | null>(null);
 
-  // Configure drag sensor
   const sensors = useSensors(
     useSensor(PointerSensor, {
-      activationConstraint: {
-        // Require 8px movement before drag starts
-        // so clicks on buttons inside the card still work
-        distance: 8,
-      },
+      activationConstraint: { distance: 8 },
     })
   );
 
@@ -40,8 +33,8 @@ export default function PipelinePage() {
     try {
       const res = await fetch("/api/leads");
       if (!res.ok) throw new Error();
-      const data = await res.json();
-      setLeads(data);
+      const results = await res.json();
+      setLeads(results.data);
     } catch {
       toast.error("Failed to load leads");
     } finally {
@@ -53,41 +46,39 @@ export default function PipelinePage() {
     fetchLeads();
   }, [fetchLeads]);
 
-  // When dragging starts, store active card id for preview
   function handleDragStart(event: DragStartEvent) {
     setActiveId(event.active.id as string);
   }
 
-  // Handle drop logic (update lead status)
   async function handleDragEnd(event: DragEndEvent) {
     const { active, over } = event;
     setActiveId(null);
 
-    // If dropped outside any valid droppable area, do nothing
     if (!over) return;
 
-    // ID of dragged lead card
     const leadId = active.id as string;
-
-    // Target status comes directly from column (over.id is always LeadStatus)
-    const targetStatus = over.id as LeadStatus;
-
-    // Find current lead from state
     const currentLead = leads.find((l) => l.id === leadId);
+    if (!currentLead) return;
 
-    // If lead doesn't exist or status didn't change, exit early
-    if (!currentLead || currentLead.status === targetStatus) return;
+    // over.id can be a status string (dropped on column)
+    // or a lead id (dropped on top of a card inside a column)
+    const overId = over.id as string;
+    const targetStatus = (
+      ALL_STATUSES.includes(overId as LeadStatus)
+        ? overId
+        : leads.find((l) => l.id === overId)?.status
+    ) as LeadStatus | undefined;
 
-    // Immediately reflect status change in UI
+    if (!targetStatus || currentLead.status === targetStatus) return;
+
+    // Optimistic update
     setLeads((prev) =>
-      prev.map((l) =>
-        l.id === leadId ? { ...l, status: targetStatus } : l
-      )
+      prev.map((l) => (l.id === leadId ? { ...l, status: targetStatus } : l))
     );
 
     try {
-      const res = await fetch(`/api/leads/${leadId}`, {
-        method: "PUT",
+      const res = await fetch(`/api/leads/${leadId}/status`, {
+        method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status: targetStatus }),
       });
@@ -97,8 +88,7 @@ export default function PipelinePage() {
       toast.success(`Moved to ${targetStatus.replace(/_/g, " ")}`);
     } catch {
       toast.error("Failed to update status");
-
-      // revert
+      // Revert on failure
       setLeads((prev) =>
         prev.map((l) =>
           l.id === leadId ? { ...l, status: currentLead.status } : l
@@ -107,22 +97,20 @@ export default function PipelinePage() {
     }
   }
 
-  // Find active card for drag preview UI
   const activeCard = leads.find((l) => l.id === activeId);
 
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-full">
-        <Loader2 className="h-6 w-6 animate-spin text-gray-400" />
+        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
       </div>
     );
   }
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-3 space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">Pipeline</h1>
-        <p className="text-sm text-gray-500">
+        <p className="text-sm text-muted-foreground ml-3">
           Drag leads between columns to update their status
         </p>
       </div>
@@ -145,14 +133,10 @@ export default function PipelinePage() {
             ))}
           </div>
 
-          {/* Dragging ghost card */}
           <DragOverlay>
             {activeCard ? (
               <div className="rotate-2 scale-105">
-                <KanbanCard
-                  lead={activeCard}
-                  onNoteAdded={() => {}}
-                />
+                <KanbanCard lead={activeCard} onNoteAdded={() => {}} />
               </div>
             ) : null}
           </DragOverlay>
