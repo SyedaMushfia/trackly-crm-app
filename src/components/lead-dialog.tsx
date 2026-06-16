@@ -1,29 +1,46 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
 import { LeadForm, type LeadFormValues } from "./lead-form";
-import type { LeadWithUser, User } from "@/types";
+import type { LeadWithUser } from "@/types";
+import { useSession } from "next-auth/react";
 import toast from "react-hot-toast";
+
+interface Salesperson {
+  id: string;
+  name: string;
+}
 
 interface LeadDialogProps {
   open: boolean;
   onClose: () => void;
   lead?: LeadWithUser;
-  users: Pick<User, "id" | "name">[];
   onSuccess: () => void;
 }
 
-export function LeadDialog({ open, onClose, lead, users, onSuccess }: LeadDialogProps) {
+export function LeadDialog({ open, onClose, lead, onSuccess }: LeadDialogProps) {
   const [isLoading, setIsLoading] = useState(false);
+  const [salespeople, setSalespeople] = useState<Salesperson[]>([]);
 
-  // Handles both create and update lead logic
+  const { data: session } = useSession();
+  const isManager = session?.user?.role === "manager";
+
+  // Fetch salespeople list when a manager opens the dialog
+  useEffect(() => {
+    if (!isManager || !open) return;
+    fetch("/api/users")
+      .then((r) => r.json())
+      .then((data: Salesperson[]) => setSalespeople(data))
+      .catch(() => toast.error("Failed to load salespeople"));
+  }, [isManager, open]);
+
+  // Handles both create and update logic
   async function handleSubmit(values: LeadFormValues) {
     setIsLoading(true);
     try {
-      // Decide endpoint and method based on mode (create vs edit)
       const url = lead ? `/api/leads/${lead.id}` : "/api/leads";
       const method = lead ? "PUT" : "POST";
 
@@ -50,20 +67,16 @@ export function LeadDialog({ open, onClose, lead, users, onSuccess }: LeadDialog
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      {/* Modal container */}
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-
-        {/* Header section */}
         <DialogHeader>
           <DialogTitle>{lead ? "Edit Lead" : "Create New Lead"}</DialogTitle>
         </DialogHeader>
-
-        {/* Lead form (shared between create & edit) */}
         <LeadForm
           lead={lead}
-          users={users}
           onSubmit={handleSubmit}
           isLoading={isLoading}
+          isManager={isManager}
+          salespeople={salespeople}
         />
       </DialogContent>
     </Dialog>
