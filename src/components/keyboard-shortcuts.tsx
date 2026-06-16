@@ -1,5 +1,6 @@
 "use client";
 
+import { useSession } from "next-auth/react";
 import { useEffect } from "react";
 
 interface KeyboardShortcutsProps {
@@ -7,8 +8,13 @@ interface KeyboardShortcutsProps {
 }
 
 export function KeyboardShortcuts({ onNewLead }: KeyboardShortcutsProps) {
+  const { data: session } = useSession();
+  const isManager = session?.user?.role === "manager";
+
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
+      if (isManager) return; // managers don't create leads
+
       // Ignore if user is typing in an input, textarea, or select
       const target = e.target as HTMLElement;
       const isTyping =
@@ -28,7 +34,7 @@ export function KeyboardShortcuts({ onNewLead }: KeyboardShortcutsProps) {
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [onNewLead]);
+  }, [onNewLead, isManager]);
 
   return null;
 }
