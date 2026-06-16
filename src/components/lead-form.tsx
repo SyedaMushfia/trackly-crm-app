@@ -3,38 +3,63 @@
 import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
+import { Field, FieldError, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { Loader2 } from "lucide-react";
-import type { LeadWithUser, User } from "@/types";
+import type { LeadWithUser } from "@/types";
+import { CountrySelect } from "./country-select";
+import { StatusBadge } from "./status-badge";
 
-// Ensures all required fields are properly validated before submission
-const leadFormSchema = z.object({
+// ---------------------------------------------------------------------------
+// Schemas — two variants so Zod validates what each role can actually submit
+// ---------------------------------------------------------------------------
+
+const baseFields = {
   name: z.string().min(1, "Name is required"),
   company: z.string().min(1, "Company is required"),
-  email: z.email("Valid email required"),
+  email: z.string().email("Valid email required"),
   phone: z.string().min(1, "Phone is required"),
   source: z.enum(["WEBSITE", "LINKEDIN", "REFERRAL", "COLD_EMAIL", "EVENT", "OTHER"], {
     message: "Lead source is required",
   }),
+  country: z.string().min(1, "Country is required"),
+  deal_value: z.number({ message: "Deal value is required" }).min(0, "Must be 0 or more"),
+};
+
+// Salesperson — edits status, no assignee field
+const salespersonSchema = z.object({
+  ...baseFields,
   status: z.enum(["NEW", "CONTACTED", "QUALIFIED", "PROPOSAL_SENT", "WON", "LOST"], {
     message: "Status is required",
   }),
-  deal_value: z.number({ message: "Deal value is required" }).min(0, "Must be 0 or more"),
-  user_id: z.string().min(1, "Salesperson is required"),
 });
 
-export type LeadFormValues = z.infer<typeof leadFormSchema>;
+// Manager — assignee required, no status field (always NEW on create, read-only on edit)
+const managerSchema = z.object({
+  ...baseFields,
+  user_id: z.string().min(1, "Assignee is required"),
+});
+
+export type SalespersonFormValues = z.infer<typeof salespersonSchema>;
+export type ManagerFormValues = z.infer<typeof managerSchema>;
+export type LeadFormValues = SalespersonFormValues | ManagerFormValues;
+
+interface Salesperson {
+  id: string;
+  name: string;
+}
 
 interface LeadFormProps {
   lead?: LeadWithUser;
-  users: Pick<User, "id" | "name">[];
   onSubmit: (values: LeadFormValues) => Promise<void>;
   isLoading: boolean;
+  isManager?: boolean;
+  // List of salespeople — only needed when isManager is true
+  salespeople?: Salesperson[];
 }
 
 const sourceOptions = [
@@ -55,21 +80,39 @@ const statusOptions = [
   { value: "LOST", label: "Lost" },
 ];
 
-export function LeadForm({ lead, users, onSubmit, isLoading }: LeadFormProps) {
+export function LeadForm({
+  lead,
+  onSubmit,
+  isLoading,
+  isManager = false,
+  salespeople = [],
+}: LeadFormProps) {
+  const schema = isManager ? managerSchema : salespersonSchema;
 
-  // React Hook Form setup with Zod validation
   const form = useForm<LeadFormValues>({
-    resolver: zodResolver(leadFormSchema),
-    defaultValues: {
-      name: lead?.name ?? "",
-      company: lead?.company ?? "",
-      email: lead?.email ?? "",
-      phone: lead?.phone ?? "",
-      source: lead?.source,
-      status: lead?.status,
-      deal_value: lead?.deal_value,
-      user_id: lead?.user_id ?? "",
-    },
+    resolver: zodResolver(schema),
+    defaultValues: isManager
+      ? {
+          name: lead?.name ?? "",
+          company: lead?.company ?? "",
+          email: lead?.email ?? "",
+          phone: lead?.phone ?? "",
+          source: lead?.source,
+          country: lead?.country ?? "",
+          deal_value: lead?.deal_value,
+          // Pre-fill assignee when editing
+          user_id: lead?.user_id ?? "",
+        }
+      : {
+          name: lead?.name ?? "",
+          company: lead?.company ?? "",
+          email: lead?.email ?? "",
+          phone: lead?.phone ?? "",
+          source: lead?.source,
+          status: lead?.status,
+          country: lead?.country ?? "",
+          deal_value: lead?.deal_value,
+        },
   });
 
   return (
@@ -151,7 +194,7 @@ export function LeadForm({ lead, users, onSubmit, isLoading }: LeadFormProps) {
         />
       </div>
 
-      {/* Row 3: Source + Status */}
+      {/* Row 3: Source + Status (SP) or Source + Assignee (Manager) */}
       <div className="grid grid-cols-2 gap-4">
         <Controller
           name="source"
@@ -165,10 +208,7 @@ export function LeadForm({ lead, users, onSubmit, isLoading }: LeadFormProps) {
                 onValueChange={field.onChange}
                 disabled={isLoading}
               >
-                <SelectTrigger
-                  id="lead-source"
-                  aria-invalid={fieldState.invalid}
-                >
+                <SelectTrigger id="lead-source" aria-invalid={fieldState.invalid}>
                   <SelectValue placeholder="Select source" />
                 </SelectTrigger>
                 <SelectContent>
@@ -181,37 +221,78 @@ export function LeadForm({ lead, users, onSubmit, isLoading }: LeadFormProps) {
             </Field>
           )}
         />
-        <Controller
-          name="status"
-          control={form.control}
-          render={({ field, fieldState }) => (
-            <Field data-invalid={fieldState.invalid}>
-              <FieldLabel htmlFor="lead-status">Status</FieldLabel>
-              <Select
-                name={field.name}
-                value={field.value}
-                onValueChange={field.onChange}
-                disabled={isLoading}
-              >
-                <SelectTrigger
-                  id="lead-status"
-                  aria-invalid={fieldState.invalid}
+
+        {isManager ? (
+          // Manager — assignee picker instead of status
+          <Controller
+            name={"user_id" as keyof LeadFormValues}
+            control={form.control}
+            render={({ field, fieldState }) => (
+              <Field data-invalid={fieldState.invalid}>
+                <FieldLabel htmlFor="lead-assignee">Assign To</FieldLabel>
+                <Select
+                  name={field.name}
+                  value={field.value as string}
+                  onValueChange={field.onChange}
+                  disabled={isLoading}
                 >
-                  <SelectValue placeholder="Select status" />
-                </SelectTrigger>
-                <SelectContent>
-                  {statusOptions.map((o) => (
-                    <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
-            </Field>
-          )}
-        />
+                  <SelectTrigger id="lead-assignee" aria-invalid={fieldState.invalid}>
+                    <SelectValue placeholder="Select salesperson" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {salespeople.map((sp) => (
+                      <SelectItem key={sp.id} value={sp.id}>{sp.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
+              </Field>
+            )}
+          />
+        ) : (
+          // Salesperson — editable status dropdown
+          <Controller
+            name={"status" as keyof LeadFormValues}
+            control={form.control}
+            render={({ field, fieldState }) => (
+              <Field data-invalid={fieldState.invalid}>
+                <FieldLabel htmlFor="lead-status">Status</FieldLabel>
+                <Select
+                  name={field.name}
+                  value={field.value as string}
+                  onValueChange={field.onChange}
+                  disabled={isLoading}
+                >
+                  <SelectTrigger id="lead-status" aria-invalid={fieldState.invalid}>
+                    <SelectValue placeholder="Select status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {statusOptions.map((o) => (
+                      <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
+              </Field>
+            )}
+          />
+        )}
       </div>
 
-      {/* Row 4: Deal Value + Salesperson */}
+      {/* Manager editing an existing lead — show current status as read-only */}
+      {isManager && lead && (
+        <Field>
+          <FieldLabel>Status</FieldLabel>
+          <div className="flex items-center h-9 px-3 rounded-md border border-input bg-muted/50 gap-2">
+            <StatusBadge status={lead.status} />
+            <span className="text-xs text-muted-foreground ml-auto">
+              Only the assigned salesperson can change this
+            </span>
+          </div>
+        </Field>
+      )}
+
+      {/* Row 4: Deal Value + Country */}
       <div className="grid grid-cols-2 gap-4">
         <Controller
           name="deal_value"
@@ -245,34 +326,25 @@ export function LeadForm({ lead, users, onSubmit, isLoading }: LeadFormProps) {
           )}
         />
         <Controller
-          name="user_id"
+          name="country"
           control={form.control}
           render={({ field, fieldState }) => (
             <Field data-invalid={fieldState.invalid}>
-              <FieldLabel htmlFor="lead-user">Assigned Salesperson</FieldLabel>
-              <Select
-                name={field.name}
-                value={field.value}
-                onValueChange={field.onChange}
+              <FieldLabel htmlFor="lead-country">Country</FieldLabel>
+              <CountrySelect
+                inputId="lead-country"
+                value={field.value ?? ""}
+                onChange={field.onChange}
+                onBlur={field.onBlur}
                 disabled={isLoading}
-              >
-                <SelectTrigger
-                  id="lead-user"
-                  aria-invalid={fieldState.invalid}
-                >
-                  <SelectValue placeholder="Select person" />
-                </SelectTrigger>
-                <SelectContent>
-                  {users.map((u) => (
-                    <SelectItem key={u.id} value={u.id}>{u.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                hasError={!!fieldState.error}
+              />
               {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
             </Field>
           )}
         />
       </div>
+
       <Button type="submit" className="w-full" disabled={isLoading}>
         {isLoading ? (
           <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Saving...</>
