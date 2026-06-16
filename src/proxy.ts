@@ -1,30 +1,45 @@
-import { auth } from '@/lib/auth';
-import { NextResponse } from 'next/server';
+import { auth } from "@/lib/auth";
+import { NextResponse } from "next/server";
 
 export default auth((req) => {
-  
-  const isLoggedIn = !!req.auth;
+  const { pathname } = req.nextUrl;
+  const session = req.auth;
+  const isLoggedIn = !!session;
+  const role = session?.user?.role;
 
-  const isOnLoginPage = req.nextUrl.pathname.startsWith('/login');
-
-  const isOnDashboard = req.nextUrl.pathname.startsWith('/dashboard');
-
-  // Protect dashboard route
-  // If user is NOT logged in and tries to access dashboard → redirect to login
-  if (isOnDashboard && !isLoggedIn) {
-    return NextResponse.redirect(new URL('/login', req.nextUrl));
+  // ── Public routes ────────────────────────────────────────
+  if (pathname.startsWith("/login")) {
+    if (isLoggedIn) {
+      return NextResponse.redirect(new URL("/dashboard", req.nextUrl));
+    }
+    return NextResponse.next();
   }
 
-  // Prevent logged-in users from accessing login page
-  // If user is logged in and tries to access login → redirect to dashboard
-  if (isOnLoginPage && isLoggedIn) {
-    return NextResponse.redirect(new URL('/dashboard', req.nextUrl));
+  // ── Protected routes — must be logged in ─────────────────
+  if (pathname.startsWith("/dashboard")) {
+    if (!isLoggedIn) {
+      // jwt() returns null when a user is deactivated mid-session.
+      // NextAuth treats a null token as no session, so !isLoggedIn
+      // catches both "never logged in" and "deactivated while logged in."
+      const loginUrl = new URL("/login", req.nextUrl);
+      loginUrl.searchParams.set("error", "SessionExpired");
+      loginUrl.searchParams.set("callbackUrl", pathname);
+      return NextResponse.redirect(loginUrl);
+    }
+
+    // ── Block salespeople from admin + team routes ──────────
+    if (pathname.startsWith("/dashboard/admin") && role !== "manager") {
+      return NextResponse.redirect(new URL("/dashboard", req.nextUrl));
+    }
+
+    if (pathname.startsWith("/dashboard/team") && role !== "manager") {
+      return NextResponse.redirect(new URL("/dashboard", req.nextUrl));
+    }
   }
 
   return NextResponse.next();
 });
 
-// Apply middleware only to these routes
 export const config = {
-  matcher: ['/dashboard/:path*', '/login'],
+  matcher: ["/dashboard/:path*", "/login"],
 };
