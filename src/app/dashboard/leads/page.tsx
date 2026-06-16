@@ -9,7 +9,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -30,27 +30,44 @@ import {
 import { StatusBadge, statusConfig, ALL_STATUSES } from "@/components/status-badge";
 import { LeadDialog } from "@/components/lead-dialog";
 import { DeleteDialog } from "@/components/delete-dialog";
+import { ReassignDialog } from "@/components/reassign-dialog";
 import { QuickNotePopover } from "@/components/quick-note-popover";
 import { KeyboardShortcuts } from "@/components/keyboard-shortcuts";
 import {
   Plus,
+  Pencil,
   Trash2,
   Search,
   AlertCircle,
   X,
   ExternalLink,
+  ArrowLeftRight,
+  Download,
+  Loader2,
 } from "lucide-react";
-import type { LeadWithUser, User, LeadStatus } from "@/types";
+import { downloadFromEndpoint, todayStr } from "@/lib/csv";
+import type { LeadWithUser, LeadStatus } from "@/types";
 import toast from "react-hot-toast";
+import { useSession } from "next-auth/react";
+
+interface PaginationInfo {
+  page: number;
+  pageSize: number;
+  total: number;
+  totalPages: number;
+}
+
+interface User {
+  id: string;
+  name: string;
+}
 
 const sourceOptions = [
   "ALL", "WEBSITE", "LINKEDIN", "REFERRAL", "COLD_EMAIL", "EVENT", "OTHER",
 ];
 
-// Marks a lead as overdue if it hasn't been updated in 7+ days
 function isOverdue(updatedAt: string) {
-  const diff = Date.now() - new Date(updatedAt).getTime();
-  return diff > 7 * 24 * 60 * 60 * 1000;
+  return Date.now() - new Date(updatedAt).getTime() > 7 * 24 * 60 * 60 * 1000;
 }
 
 function LeadsPageInner() {
@@ -58,44 +75,39 @@ function LeadsPageInner() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
-  // Keep filter state in sync with URL query params so filters persist across page reloads and shared links
   const [search, setSearch] = useState(searchParams.get("search") ?? "");
-  const [statusFilter, setStatusFilter] = useState(
-    searchParams.get("status") ?? "ALL"
-  );
-  const [sourceFilter, setSourceFilter] = useState(
-    searchParams.get("source") ?? "ALL"
-  );
-  const [userFilter, setUserFilter] = useState(
-    searchParams.get("user_id") ?? "ALL"
-  );
+  const [statusFilter, setStatusFilter] = useState(searchParams.get("status") ?? "ALL");
+  const [sourceFilter, setSourceFilter] = useState(searchParams.get("source") ?? "ALL");
+  const [userFilter, setUserFilter] = useState(searchParams.get("user_id") ?? "ALL");
+  const [page, setPage] = useState(Math.max(1, parseInt(searchParams.get("page") ?? "1", 10)));
 
   const [leads, setLeads] = useState<LeadWithUser[]>([]);
-  const [users, setUsers] = useState<Pick<User, "id" | "name">[]>([]);
+  const [pagination, setPagination] = useState<PaginationInfo | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [createOpen, setCreateOpen] = useState(false);
+  const [editLead, setEditLead] = useState<LeadWithUser | null>(null);
   const [deleteLead, setDeleteLead] = useState<LeadWithUser | null>(null);
+  const [reassignLead, setReassignLead] = useState<LeadWithUser | null>(null);
+  const [users, setUsers] = useState<User[]>([]);
+  const [isExporting, setIsExporting] = useState(false);
 
-  /*
-   Updates the URL query parameters to reflect the current filter state,
-   enabling shareable and bookmarkable filtered views.
- */
+  const { data: session } = useSession();
+  const isManager = session?.user?.role === "manager";
+
   const updateURL = useCallback(
-    (s: string, st: string, so: string, u: string) => {
+    (s: string, st: string, so: string, u: string, p: number) => {
       const params = new URLSearchParams();
       if (s) params.set("search", s);
       if (st !== "ALL") params.set("status", st);
       if (so !== "ALL") params.set("source", so);
       if (u !== "ALL") params.set("user_id", u);
+      if (p > 1) params.set("page", String(p));
       const query = params.toString();
-      router.replace(`${pathname}${query ? `?${query}` : ""}`, {
-        scroll: false,
-      });
+      router.replace(`${pathname}${query ? `?${query}` : ""}`, { scroll: false });
     },
     [pathname, router]
   );
 
-  // Fetch leads from API with current filters
   const fetchLeads = useCallback(async () => {
     setIsLoading(true);
     try {
@@ -104,40 +116,57 @@ function LeadsPageInner() {
       if (statusFilter !== "ALL") params.set("status", statusFilter);
       if (sourceFilter !== "ALL") params.set("source", sourceFilter);
       if (userFilter !== "ALL") params.set("user_id", userFilter);
+      params.set("page", String(page));
+
       const res = await fetch(`/api/leads?${params.toString()}`);
       if (!res.ok) throw new Error();
-      setLeads(await res.json());
+      const json = await res.json();
+      setLeads(json.data);
+      setPagination(json.pagination);
     } catch {
       toast.error("Failed to load leads");
     } finally {
       setIsLoading(false);
     }
-  }, [search, statusFilter, sourceFilter, userFilter]);
+  }, [search, statusFilter, sourceFilter, userFilter, page]);
 
-  // Load leads whenever filters change
+  async function handleExport() {
+    const params = new URLSearchParams();
+    if (search) params.set("search", search);
+    if (statusFilter !== "ALL") params.set("status", statusFilter);
+    if (sourceFilter !== "ALL") params.set("source", sourceFilter);
+    if (userFilter !== "ALL") params.set("user_id", userFilter);
+
+    setIsExporting(true);
+    try {
+      await downloadFromEndpoint(`/api/leads/export?${params.toString()}`, `leads-${todayStr()}.csv`);
+    } catch {
+      toast.error("Failed to export leads");
+    } finally {
+      setIsExporting(false);
+    }
+  }
+
+  useEffect(() => {
+    if (!isManager) return;
+    fetch("/api/users")
+      .then((r) => r.json())
+      .then((data: User[]) => setUsers(data))
+      .catch(() => toast.error("Failed to load salespeople"));
+  }, [isManager]);
+
   useEffect(() => {
     fetchLeads();
   }, [fetchLeads]);
 
-  useEffect(() => {
-    fetch("/api/users")
-      .then((r) => r.json())
-      .then(setUsers)
-      .catch(() => {});
-  }, []);
-
-  // Inline status update
-  async function handleInlineStatusChange(
-    leadId: string,
-    newStatus: LeadStatus
-  ) {
-    // Update UI immediately
+  // Inline status change — calls dedicated /status route
+  async function handleInlineStatusChange(leadId: string, newStatus: LeadStatus) {
     setLeads((prev) =>
       prev.map((l) => (l.id === leadId ? { ...l, status: newStatus } : l))
     );
     try {
-      const res = await fetch(`/api/leads/${leadId}`, {
-        method: "PUT",
+      const res = await fetch(`/api/leads/${leadId}/status`, {
+        method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status: newStatus }),
       });
@@ -145,11 +174,27 @@ function LeadsPageInner() {
       toast.success("Status updated");
     } catch {
       toast.error("Failed to update status");
-      fetchLeads(); // revert
+      fetchLeads();
     }
   }
 
-  // Check if any filters are active
+  // When filters change reset to page 1
+  function handleFilterChange(
+    s: string, st: string, so: string, u: string
+  ) {
+    setSearch(s);
+    setStatusFilter(st);
+    setSourceFilter(so);
+    setUserFilter(u);
+    setPage(1);
+    updateURL(s, st, so, u, 1);
+  }
+
+  function handlePageChange(next: number) {
+    setPage(next);
+    updateURL(search, statusFilter, sourceFilter, userFilter, next);
+  }
+
   const hasActiveFilters =
     search || statusFilter !== "ALL" || sourceFilter !== "ALL" || userFilter !== "ALL";
 
@@ -158,55 +203,58 @@ function LeadsPageInner() {
     setStatusFilter("ALL");
     setSourceFilter("ALL");
     setUserFilter("ALL");
+    setPage(1);
     router.replace(pathname, { scroll: false });
   }
 
   return (
     <>
-      {/* N key shortcut to open new lead modal */}
       <KeyboardShortcuts onNewLead={() => setCreateOpen(true)} />
 
-      <div className="p-6 space-y-6">
+      <div className="p-3 space-y-3">
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Leads</h1>
-            <p className="text-sm text-gray-500">
+            <p className="text-sm text-muted-foreground ml-3 -mt-4">
               {isLoading
                 ? "Loading..."
-                : `${leads.length} lead${leads.length !== 1 ? "s" : ""}`}
+                : `${pagination?.total ?? 0} lead${pagination?.total !== 1 ? "s" : ""}`}
               {hasActiveFilters && " (filtered)"}
             </p>
           </div>
-          <Button onClick={() => setCreateOpen(true)}>
-            <Plus className="mr-2 h-4 w-4" />
-            Add Lead
-            <kbd className="ml-2 text-xs bg-white/20 px-1.5 py-0.5 rounded font-mono">
-              N
-            </kbd>
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" onClick={handleExport} disabled={isExporting}>
+              {isExporting ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <Download className="mr-2 h-4 w-4" />
+              )}
+              Export CSV
+            </Button>
+            <Button onClick={() => setCreateOpen(true)}>
+              <Plus className="mr-2 h-4 w-4" />
+              Add Lead
+              {!isManager && (
+                <kbd className="ml-2 text-xs bg-card/20 px-1.5 py-0.5 rounded font-mono">N</kbd>
+              )}
+            </Button>
+          </div>
         </div>
 
         {/* Filters */}
         <div className="flex flex-wrap gap-3 items-center">
           <div className="relative flex-1 min-w-[200px]">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
               placeholder="Search name, company, email..."
               className="pl-9"
               value={search}
-              onChange={(e) => {
-                setSearch(e.target.value);
-                updateURL(e.target.value, statusFilter, sourceFilter, userFilter);
-              }}
+              onChange={(e) => handleFilterChange(e.target.value, statusFilter, sourceFilter, userFilter)}
             />
           </div>
           <Select
             value={statusFilter}
-            onValueChange={(v) => {
-              setStatusFilter(v);
-              updateURL(search, v, sourceFilter, userFilter);
-            }}
+            onValueChange={(v) => handleFilterChange(search, v, sourceFilter, userFilter)}
           >
             <SelectTrigger className="w-44">
               <SelectValue placeholder="All Statuses" />
@@ -222,10 +270,7 @@ function LeadsPageInner() {
           </Select>
           <Select
             value={sourceFilter}
-            onValueChange={(v) => {
-              setSourceFilter(v);
-              updateURL(search, statusFilter, v, userFilter);
-            }}
+            onValueChange={(v) => handleFilterChange(search, statusFilter, v, userFilter)}
           >
             <SelectTrigger className="w-40">
               <SelectValue placeholder="All Sources" />
@@ -233,37 +278,31 @@ function LeadsPageInner() {
             <SelectContent>
               {sourceOptions.map((s) => (
                 <SelectItem key={s} value={s}>
-                  {s === "ALL" ? "All Sources" : s.toLowerCase().replace(/_/g, " ").replace(/\b\w/g, (char) => char.toUpperCase())}
+                  {s === "ALL"
+                    ? "All Sources"
+                    : s.toLowerCase().replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())}
                 </SelectItem>
               ))}
             </SelectContent>
           </Select>
-          <Select
-            value={userFilter}
-            onValueChange={(v) => {
-              setUserFilter(v);
-              updateURL(search, statusFilter, sourceFilter, v);
-            }}
-          >
-            <SelectTrigger className="w-44">
-              <SelectValue placeholder="All Salespeople" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="ALL">All Salespeople</SelectItem>
-              {users.map((u) => (
-                <SelectItem key={u.id} value={u.id}>
-                  {u.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          {hasActiveFilters && (
-            <Button
-              variant="ghost"
-              size="sm"
-              className="text-gray-500"
-              onClick={clearAllFilters}
+          {isManager && (
+            <Select
+              value={userFilter}
+              onValueChange={(v) => handleFilterChange(search, statusFilter, sourceFilter, v)}
             >
+              <SelectTrigger className="w-44">
+                <SelectValue placeholder="All Salespeople" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="ALL">All Salespeople</SelectItem>
+                {users.map((u) => (
+                  <SelectItem key={u.id} value={u.id}>{u.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+          {hasActiveFilters && (
+            <Button variant="ghost" size="sm" className="text-muted-foreground" onClick={clearAllFilters}>
               <X className="mr-1 h-3 w-3" />
               Clear
             </Button>
@@ -271,10 +310,10 @@ function LeadsPageInner() {
         </div>
 
         {/* Table */}
-        <div className="border rounded-lg bg-white overflow-hidden">
+        <div className="border rounded-lg bg-card overflow-hidden">
           <Table>
             <TableHeader>
-              <TableRow className="bg-gray-50">
+              <TableRow className="bg-muted/30">
                 <TableHead>Lead</TableHead>
                 <TableHead>Company</TableHead>
                 <TableHead>Source</TableHead>
@@ -288,37 +327,31 @@ function LeadsPageInner() {
             <TableBody>
               {isLoading ? (
                 <TableRow>
-                  <TableCell
-                    colSpan={7}
-                    className="text-center py-12 text-gray-400"
-                  >
+                  <TableCell colSpan={8} className="text-center py-12 text-muted-foreground">
                     Loading leads...
                   </TableCell>
                 </TableRow>
               ) : leads.length === 0 ? (
                 <TableRow>
-                  <TableCell
-                    colSpan={7}
-                    className="text-center py-12 text-gray-400"
-                  >
+                  <TableCell colSpan={8} className="text-center py-12 text-muted-foreground">
                     {hasActiveFilters
                       ? "No leads match your filters."
-                      : "No leads yet. Press N or click Add Lead."}
+                      : "No leads yet. Click Add Lead to get started."}
                   </TableCell>
                 </TableRow>
               ) : (
                 leads.map((lead) => (
-                  <TableRow key={lead.id} className="hover:bg-gray-50 group">
+                  <TableRow key={lead.id} className="hover:bg-muted/30 group">
                     <TableCell>
                       <div className="flex items-start gap-2">
                         <div>
                           <Link
                             href={`/dashboard/leads/${lead.id}`}
-                            className="font-medium text-gray-900 hover:text-[#18cb96] hover:underline"
+                            className="font-medium text-foreground hover:text-[#18cb96] hover:underline"
                           >
                             {lead.name}
                           </Link>
-                          <p className="text-xs text-gray-400">{lead.email}</p>
+                          <p className="text-xs text-muted-foreground">{lead.email}</p>
                         </div>
                         {isOverdue(lead.updated_at) && (
                           <span className="flex items-center gap-1 text-xs text-red-600 bg-red-50 px-2 py-0.5 rounded-full whitespace-nowrap mt-0.5">
@@ -328,25 +361,25 @@ function LeadsPageInner() {
                         )}
                       </div>
                     </TableCell>
-                    <TableCell className="text-sm text-gray-600">
-                      {lead.company}
-                    </TableCell>
-                    <TableCell className="text-sm text-gray-600">
-                      {lead.source.toLowerCase().replace(/_/g, " ").replace(/\b\w/g, (char) => char.toUpperCase())}
+                    <TableCell className="text-sm text-muted-foreground">{lead.company}</TableCell>
+                    <TableCell className="text-sm text-muted-foreground">
+                      {lead.source.toLowerCase().replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())}
                     </TableCell>
 
-                    {/* One-click inline status dropdown */}
+                    {/* Status — read-only badge for managers, dropdown for salespeople */}
                     <TableCell>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <button className="flex items-center gap-1 cursor-pointer rounded focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500">
-                            <StatusBadge status={lead.status} />
-                            <ChevronDown className="h-3 w-3 text-gray-400" />
-                          </button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="start">
-                          {(["NEW", "CONTACTED", "QUALIFIED", "PROPOSAL_SENT", "WON", "LOST"] as LeadStatus[]).map(
-                            (s) => (
+                      {isManager ? (
+                        <StatusBadge status={lead.status} />
+                      ) : (
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <button className="flex items-center gap-1 cursor-pointer rounded focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500">
+                              <StatusBadge status={lead.status} />
+                              <ChevronDown className="h-3 w-3 text-muted-foreground" />
+                            </button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="start">
+                            {ALL_STATUSES.map((s) => (
                               <DropdownMenuItem
                                 key={s}
                                 onSelect={() => handleInlineStatusChange(lead.id, s)}
@@ -354,29 +387,69 @@ function LeadsPageInner() {
                               >
                                 <StatusBadge status={s} />
                               </DropdownMenuItem>
-                            )
-                          )}
-                        </DropdownMenuContent>
-                      </DropdownMenu>
+                            ))}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      )}
                     </TableCell>
+
                     <TableCell className="font-medium">
                       ${Number(lead.deal_value).toLocaleString()}
                     </TableCell>
-                    <TableCell className="text-sm text-gray-600">
+                    <TableCell className="text-sm text-muted-foreground">
                       {lead.users?.name ?? "—"}
                     </TableCell>
-                    <TableCell className="text-sm text-gray-500">
+                    <TableCell className="text-sm text-muted-foreground">
                       {new Date(lead.updated_at).toLocaleDateString()}
                     </TableCell>
 
-                    {/* Actions — note popover + view link + delete */}
+                    {/* Actions */}
                     <TableCell>
                       <div className="flex justify-end items-center gap-1">
+                        {/* Quick note — available to both roles */}
                         <QuickNotePopover
                           leadId={lead.id}
                           leadName={lead.name}
                           onSuccess={fetchLeads}
                         />
+
+                        {/* Reassign — manager only */}
+                        {isManager && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="text-muted-foreground hover:text-purple-700 hover:bg-purple-50"
+                            title="Reassign lead"
+                            onClick={() => setReassignLead(lead)}
+                          >
+                            <ArrowLeftRight className="h-4 w-4" />
+                          </Button>
+                        )}
+
+                        {/* Edit — both roles */}
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="text-muted-foreground hover:text-foreground"
+                          title="Edit lead"
+                          onClick={() => setEditLead(lead)}
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+
+                        {/* View detail */}
+                        <Link href={`/dashboard/leads/${lead.id}`}>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="text-muted-foreground hover:text-foreground"
+                            title="View lead details"
+                          >
+                            <ExternalLink className="h-4 w-4" />
+                          </Button>
+                        </Link>
+
+                        {/* Delete — both roles */}
                         <Button
                           variant="ghost"
                           size="icon"
@@ -394,15 +467,89 @@ function LeadsPageInner() {
             </TableBody>
           </Table>
         </div>
+
+        {/* Pagination */}
+        {pagination && pagination.totalPages > 1 && (
+          <div className="flex items-center justify-between mt-10">
+            <p className="text-sm text-muted-foreground">
+              Showing {(pagination.page - 1) * pagination.pageSize + 1}–
+              {Math.min(pagination.page * pagination.pageSize, pagination.total)} of{" "}
+              {pagination.total}
+            </p>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => handlePageChange(page - 1)}
+                disabled={page <= 1}
+              >
+                <ChevronLeft className="h-4 w-4" />
+                Previous
+              </Button>
+
+              <div className="flex gap-1">
+                {Array.from({ length: pagination.totalPages }, (_, i) => i + 1)
+                  .filter(
+                    (p) =>
+                      p === 1 ||
+                      p === pagination.totalPages ||
+                      Math.abs(p - page) <= 2
+                  )
+                  .reduce<(number | "...")[]>((acc, p, idx, arr) => {
+                    if (idx > 0 && p - (arr[idx - 1] as number) > 1) acc.push("...");
+                    acc.push(p);
+                    return acc;
+                  }, [])
+                  .map((item, idx) =>
+                    item === "..." ? (
+                      <span key={`ellipsis-${idx}`} className="px-2 text-muted-foreground flex items-center">…</span>
+                    ) : (
+                      <Button
+                        key={item}
+                        variant={item === page ? "default" : "outline"}
+                        size="sm"
+                        className="w-8 px-0"
+                        onClick={() => handlePageChange(item as number)}
+                      >
+                        {item}
+                      </Button>
+                    )
+                  )}
+              </div>
+
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => handlePageChange(page + 1)}
+                disabled={page >= pagination.totalPages}
+              >
+                Next
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Modals */}
       <LeadDialog
         open={createOpen}
         onClose={() => setCreateOpen(false)}
-        users={users}
         onSuccess={fetchLeads}
       />
+
+      {editLead && (
+        <LeadDialog
+          open={!!editLead}
+          onClose={() => setEditLead(null)}
+          lead={editLead}
+          onSuccess={() => {
+            fetchLeads();
+            setEditLead(null);
+          }}
+        />
+      )}
+
       {deleteLead && (
         <DeleteDialog
           open={!!deleteLead}
@@ -415,13 +562,25 @@ function LeadsPageInner() {
           }}
         />
       )}
+
+      {reassignLead && (
+        <ReassignDialog
+          open={!!reassignLead}
+          onClose={() => setReassignLead(null)}
+          lead={reassignLead}
+          onSuccess={() => {
+            fetchLeads();
+            setReassignLead(null);
+          }}
+        />
+      )}
     </>
   );
 }
 
 export default function LeadsPage() {
   return (
-    <Suspense fallback={<div className="p-6 text-gray-400">Loading...</div>}>
+    <Suspense fallback={<div className="p-6 text-muted-foreground">Loading...</div>}>
       <LeadsPageInner />
     </Suspense>
   );
