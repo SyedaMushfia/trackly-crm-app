@@ -32,7 +32,7 @@ export function KanbanColumn({ status, leads, onNoteAdded }: KanbanColumnProps) 
       <div className="flex items-center justify-between mb-3 px-1">
         <div className="flex items-center gap-2">
           <StatusBadge status={status} />
-          <span className="text-sm font-medium text-gray-500">
+          <span className="text-sm font-medium text-muted-foreground">
             {leads.length}
           </span>
         </div>
@@ -48,8 +48,8 @@ export function KanbanColumn({ status, leads, onNoteAdded }: KanbanColumnProps) 
           ref={setNodeRef}
           className={`min-h-[110px] rounded-lg p-2 space-y-2 transition-colors ${
             isOver
-              ? "bg-blue-50 ring-2 ring-[#18cb96]/50" // highlight when dragging over
-              : "bg-gray-50"
+              ? "bg-primary/10 ring-2 ring-[#18cb96]/50"
+              : "bg-muted/30"
           }`}
         >
           {/* Sortable list for drag-and-drop ordering */}
@@ -58,7 +58,7 @@ export function KanbanColumn({ status, leads, onNoteAdded }: KanbanColumnProps) 
             strategy={verticalListSortingStrategy}
           >
             {leads.length === 0 ? (
-              <div className="flex items-center justify-center h-24 text-xs text-gray-400 border-2 border-dashed border-gray-200 rounded-lg">
+              <div className="flex items-center justify-center h-24 text-xs text-muted-foreground border-2 border-dashed border-border rounded-lg">
                 Drop here
               </div>
             ) : (
