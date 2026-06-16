@@ -233,8 +233,6 @@ Route protection is implemented via `src/proxy.ts` and `src/lib/auth.ts`.
 - `npm run dev` — start development server.
 - `npm run build` — build production output.
 - `npm run start` — run production server.
-- `npm run lint` — run ESLint.
-- `npm run db:types` — generate Supabase TypeScript types.
 
 ## Notes
 
