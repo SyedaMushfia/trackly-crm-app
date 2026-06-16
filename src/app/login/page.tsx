@@ -1,65 +1,81 @@
 "use client";
 
-import { useState } from "react";
-import { Controller, useForm } from "react-hook-form";
+import { useState, Suspense } from "react";
+import { signIn } from "next-auth/react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { signIn } from "next-auth/react";
-import { useRouter } from "next/navigation";
-import { Loader2 } from "lucide-react";
-import toast from "react-hot-toast"; 
-
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import {
-  Field,
-  FieldError,
-  FieldGroup,
-  FieldLabel,
-} from "@/components/ui/field";
-import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Loader2, Eye, EyeOff } from "lucide-react";
+import { QuoteCarousel } from "@/components/quote-carousel";
+import toast from "react-hot-toast";
 
-// Validation schema for login form
 const loginSchema = z.object({
-  email: z.email("Enter a valid email"),
+  email: z.string().email("Enter a valid email"),
   password: z.string().min(1, "Password is required"),
 });
 
 type LoginForm = z.infer<typeof loginSchema>;
 
+function FieldError({ message }: { message?: string }) {
+  if (!message) return null;
+  return <p className="text-xs text-red-500 mt-1.5">{message}</p>;
+}
+
+// Reads ?error= from URL — only fires when middleware redirects
+// a deactivated user back to login mid-session.
+// Needs Suspense because useSearchParams() requires it in App Router.
+function SessionErrorBanner() {
+  const searchParams = useSearchParams();
+  const error = searchParams.get("error");
+
+  if (error !== "SessionExpired") return null;
+
+  return (
+    <div className="mb-6 rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
+      Your session has expired or your account was deactivated. Please sign in again.
+    </div>
+  );
+}
+
 export default function LoginPage() {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
-  // React Hook Form setup with Zod validation
-  const form = useForm<LoginForm>({
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm<LoginForm>({
     resolver: zodResolver(loginSchema),
-    defaultValues: { email: "", password: "" },
   });
 
-  // Handles login submission using NextAuth credentials provider
   async function onSubmit(values: LoginForm) {
     setIsLoading(true);
     try {
       const result = await signIn("credentials", {
         email: values.email,
         password: values.password,
-        redirect: false, // prevent auto redirect so we can control UX
+        redirect: false,
       });
 
       if (result?.error) {
-        toast.error("Invalid email or password");
-      } else {
-        toast.success("Welcome back!");
-        router.push("/dashboard");
-        router.refresh();
+        if (result.error.includes("DEACTIVATED")) {
+          toast.error(
+            "This account has been deactivated. Contact your manager.",
+            { duration: 5000 }
+          );
+        } else {
+          toast.error("Invalid email or password.");
+        }
+        return;
       }
+
+      router.push("/dashboard");
+      router.refresh();
     } catch {
       toast.error("Something went wrong. Please try again.");
     } finally {
@@ -68,76 +84,108 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center gap-[10px] bg-gray-50">
-      <div className="w-50 h-20 -mt-10">
-        <img src="/trackly-logo.png" alt="Trackly" className="h-full w-full object-contain" />
+    <div className="min-h-screen flex">
+      {/* ── Left panel — image + quote ── */}
+      <div className="hidden lg:flex lg:w-1/2 relative bg-gray-900 flex-col p-12">
+        <div
+          className="absolute inset-0 bg-cover bg-center bg-no-repeat"
+          style={{ backgroundImage: "url('../bg-img.webp')" }}
+        />
+        <div className="absolute inset-0 bg-gray-900/70" />
+        <div className="flex-1 flex flex-col justify-end pb-4">
+          <QuoteCarousel />
+        </div>
       </div>
-      <Card className="w-full max-w-md shadow-lg">
-        <CardHeader className="space-y-1 text-center">
-          <CardTitle className="text-2xl font-bold">Welcome back</CardTitle>
-          <CardDescription>
-            Sign in to access your Trackly dashboard
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={form.handleSubmit(onSubmit)}>
-            <FieldGroup>
-              <Controller
-                name="email"
-                control={form.control}
-                render={({ field, fieldState }) => (
-                  <Field data-invalid={fieldState.invalid}>
-                    <FieldLabel htmlFor="login-email">Email</FieldLabel>
-                    <Input
-                      {...field}
-                      id="login-email"
-                      type="email"
-                      placeholder="admin@example.com"
-                      aria-invalid={fieldState.invalid}
-                      disabled={isLoading}
-                    />
-                    {fieldState.invalid && (
-                      <FieldError errors={[fieldState.error]} />
-                    )}
-                  </Field>
-                )}
-              />
 
-              <Controller
-                name="password"
-                control={form.control}
-                render={({ field, fieldState }) => (
-                  <Field data-invalid={fieldState.invalid}>
-                    <FieldLabel htmlFor="login-password">Password</FieldLabel>
-                    <Input
-                      {...field}
-                      id="login-password"
-                      type="password"
-                      placeholder="••••••••"
-                      aria-invalid={fieldState.invalid}
-                      disabled={isLoading}
-                    />
-                    {fieldState.invalid && (
-                      <FieldError errors={[fieldState.error]} />
-                    )}
-                  </Field>
-                )}
-              />
-            </FieldGroup>
+      {/* ── Right panel — login form ── */}
+      <div className="flex-1 flex flex-col items-center justify-start bg-background">
+        {/* Logo */}
+        <div className="w-50 h-20 mb-30 mt-4">
+          <img src="/trackly-logo.png" alt="Trackly" className="h-full w-full object-contain" />
+        </div>
 
-            <Button type="submit" className="w-full mt-4" disabled={isLoading}>
+        <div className="w-full max-w-sm">
+          {/* Heading */}
+          <div className="mb-8">
+            <h1 className="text-2xl font-bold text-foreground">Welcome back</h1>
+            <p className="text-muted-foreground text-sm mt-1">
+              Sign in to your account to continue
+            </p>
+          </div>
+
+          {/* Session expired banner — only shows when middleware redirects here */}
+          <Suspense fallback={null}>
+            <SessionErrorBanner />
+          </Suspense>
+
+          {/* Form */}
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
+            {/* Email */}
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-1.5">
+                Email address
+              </label>
+              <Input
+                type="email"
+                placeholder="you@company.com"
+                autoComplete="email"
+                disabled={isLoading}
+                className={`h-11 ${errors.email ? "border-red-400 focus-visible:ring-red-400" : ""}`}
+                {...register("email")}
+              />
+              <FieldError message={errors.email?.message} />
+            </div>
+
+            {/* Password */}
+            <div>
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="block text-sm font-medium text-foreground">
+                  Password
+                </label>
+              </div>
+              <div className="relative">
+                <Input
+                  type={showPassword ? "text" : "password"}
+                  placeholder="••••••••"
+                  autoComplete="current-password"
+                  disabled={isLoading}
+                  className={`h-11 pr-10 ${errors.password ? "border-red-400 focus-visible:ring-red-400" : ""}`}
+                  {...register("password")}
+                />
+                <button
+                  type="button"
+                  tabIndex={-1}
+                  onClick={() => setShowPassword((v) => !v)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                >
+                  {showPassword ? (
+                    <EyeOff className="h-4 w-4" />
+                  ) : (
+                    <Eye className="h-4 w-4" />
+                  )}
+                </button>
+              </div>
+              <FieldError message={errors.password?.message} />
+            </div>
+
+            {/* Submit */}
+            <Button
+              type="submit"
+              className="w-full h-11 font-medium"
+              disabled={isLoading}
+            >
               {isLoading ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   Signing in...
                 </>
               ) : (
-                "SIGN IN"
+                "Sign in"
               )}
             </Button>
           </form>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
     </div>
   );
 }
