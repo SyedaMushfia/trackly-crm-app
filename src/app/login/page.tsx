@@ -95,9 +95,9 @@ export default function LoginPage() {
       </div>
 
       {/* ── Right panel — login form ── */}
-      <div className="flex-1 flex flex-col items-center justify-center bg-background px-4 py-8 sm:px-6">
+      <div className="flex-1 flex flex-col items-center justify-start bg-background px-4 py-4 sm:px-6">
         {/* Logo */}
-        <div className="w-36 sm:w-44 h-14 sm:h-18 mb-6 sm:mb-10">
+        <div className="w-36 sm:w-44 h-14 sm:h-18 mb-6 sm:mb-30">
           <img
             src="/trackly-logo.png"
             alt="Trackly"
