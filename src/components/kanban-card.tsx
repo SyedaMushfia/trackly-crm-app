@@ -43,7 +43,7 @@ export function KanbanCard({ lead, onNoteAdded }: KanbanCardProps) {
     <div
       ref={setNodeRef}
       style={style}
-      className={`bg-white border rounded-lg p-3 ml-2 shadow-sm group relative ${
+      className={`bg-card border rounded-lg p-3 ml-2 shadow-sm group relative ${
         isDragging ? "shadow-lg ring-2 ring-[#18cb96]/50" : "hover:shadow-md"
       } transition-shadow`}
     >
@@ -51,7 +51,7 @@ export function KanbanCard({ lead, onNoteAdded }: KanbanCardProps) {
       <button
         {...attributes}
         {...listeners}
-        className="mt-0.5 absolute -left-[18px] text-gray-300 hover:text-gray-500 cursor-grab active:cursor-grabbing flex-shrink-0 touch-none"
+        className="mt-0.5 absolute -left-[18px] text-muted-foreground/70 hover:text-muted-foreground cursor-grab active:cursor-grabbing flex-shrink-0 touch-none"
         >
           <GripVertical className="h-4 w-4" />
       </button>
@@ -60,11 +60,11 @@ export function KanbanCard({ lead, onNoteAdded }: KanbanCardProps) {
           <div className="min-w-0">
             <Link
               href={`/dashboard/leads/${lead.id}`}
-              className="text-sm font-medium text-gray-900 hover:text-[#18cb96] hover:underline block truncate"
+              className="text-sm font-medium text-foreground hover:text-[#18cb96] hover:underline block truncate"
             >
               {lead.name}
             </Link>
-            <p className="text-xs text-gray-500 truncate">{lead.company}</p>
+            <p className="text-xs text-muted-foreground truncate">{lead.company}</p>
           </div>
         </div>
         <div className="flex items-center gap-1 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -75,7 +75,7 @@ export function KanbanCard({ lead, onNoteAdded }: KanbanCardProps) {
           />
           <Link href={`/dashboard/leads/${lead.id}`}>
             <button
-              className="p-1 text-gray-400 hover:text-gray-700 rounded"
+              className="p-1 text-muted-foreground hover:text-foreground rounded"
               title="View lead"
             >
               <ExternalLink className="h-3.5 w-3.5" />
@@ -85,10 +85,10 @@ export function KanbanCard({ lead, onNoteAdded }: KanbanCardProps) {
       </div>
 
       <div className="mt-2 flex items-center justify-between">
-        <span className="text-xs font-semibold text-gray-700">
+        <span className="text-xs font-semibold text-foreground">
           ${Number(lead.deal_value).toLocaleString()}
         </span>
-        <span className="text-xs text-gray-400">
+        <span className="text-xs text-muted-foreground">
           {lead.users?.name?.split(" ")[0] ?? "—"}
         </span>
       </div>
