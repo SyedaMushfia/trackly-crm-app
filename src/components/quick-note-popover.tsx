@@ -59,7 +59,7 @@ export function QuickNotePopover({
         <Button
           variant="ghost"
           size="icon"
-          className="text-gray-400 hover:text-gray-700"
+          className="text-muted-foreground hover:text-foreground"
           title="Quick add note"
         >
           <StickyNote className="h-4 w-4" />
@@ -68,8 +68,8 @@ export function QuickNotePopover({
       <PopoverContent className="w-80 p-4" align="end">
         <div className="space-y-3">
           <div>
-            <p className="text-sm font-medium text-gray-900">Add note</p>
-            <p className="text-xs text-gray-400 truncate">{leadName}</p>
+            <p className="text-sm font-medium text-foreground">Add note</p>
+            <p className="text-xs text-muted-foreground truncate">{leadName}</p>
           </div>
           <form onSubmit={handleSubmit} className="space-y-2">
             <Textarea
@@ -90,7 +90,7 @@ export function QuickNotePopover({
               }}
             />
             <div className="flex justify-between items-center">
-              <p className="text-xs text-gray-400">⌘+Enter to submit</p>
+              <p className="text-xs text-muted-foreground">⌘+Enter to submit</p>
               <div className="flex gap-2">
                 <Button
                   type="button"
