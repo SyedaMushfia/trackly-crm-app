@@ -1,214 +1,245 @@
 # Trackly CRM
 
-Trackly is a full-stack customer relationship management web app for tracking leads through a sales pipeline. It provides credential-based authentication, lead management with full CRUD, a drag-and-drop Kanban board, notes per lead, and a dashboard with live pipeline metrics — built for small sales teams to move deals from first contact to closed.
-
-## Live Demo
-
-https://trackly-crm-app.vercel.app
+Trackly is a full-stack customer relationship management application built with Next.js App Router, Supabase, and NextAuth. It supports manager and salesperson workflows with lead management, tasks, notes, messaging, pipeline staging, team metrics, export, and admin audit logging.
 
 ## Table of Contents
 
 - Project Overview
 - Tech Stack
 - Features
-- How to Run Locally
+- Getting Started
 - Environment Variables
-- Database Setup
-- Test Login Credentials
-- Known Limitations
-- Reflection
+- Database Schema
+- Routes & Access Control
+- Demo Credentials
+- Helpful Scripts
+- Notes
 
 ## Project Overview
 
-The app is built as a full-stack Next.js application using the App Router:
+Trackly is designed for small sales teams. The app includes:
 
-- Pages — Login, Dashboard, Leads list, Lead detail, and Kanban pipeline views
-- API routes — Route handlers under src/app/api for auth, leads, notes, users, and dashboard stats
-- Database — Supabase (Postgres) as the persistent data store
-- Auth — NextAuth with email/password credentials and bcrypt-hashed passwords
+- Credential-based authentication with active account checks.
+- Role-aware dashboards for managers and salespeople.
+- Lead CRUD, notes, messages, reassignments, and status updates.
+- Sales pipeline drag-and-drop board.
+- Task management and notifications.
+- Team performance analytics and export.
+- Admin audit log and user management.
+- Settings page with profile, password, avatar, and demo-data reset.
 
-## Tech Stack Used
+## Tech Stack
 
-- **Framework**: Next.js 16 (App Router), React 19, TypeScript
-- **Styling/UI**: Tailwind CSS v4, Radix/shadcn-style components, `lucide-react`
-- **Forms/Validation**: `react-hook-form`, `zod`
-- **Authentication**: `next-auth`, `bcryptjs`
-- **Database**: Supabase Postgres via `@supabase/supabase-js`
-- **Drag and Drop**: `@dnd-kit/core`, `@dnd-kit/sortable`, `@dnd-kit/utilities`
-- **Tooling**: ESLint, PostCSS, TypeScript
+- Next.js 16 (App Router)
+- React 19
+- TypeScript
+- Tailwind CSS v4
+- NextAuth (credentials)
+- Supabase Postgres via `@supabase/supabase-js`
+- `react-hook-form`, `zod`
+- `@dnd-kit/core`, `@dnd-kit/sortable`, `@dnd-kit/utilities`
+- `recharts`, `react-simple-maps`, `react-select`
+- `react-hot-toast`, `lucide-react`
 
-## Features Implemented
+## Features
 
-- Credential login and protected dashboard routes
-- Dashboard KPIs (lead counts by status, pipeline value, won revenue)
-- Leads list with:
-  - Search by name/company/email
-  - Filters by status/source/assigned salesperson
-  - Quick status updates
-  - Overdue lead indicators
-- Lead CRUD:
-  - Create new lead
-  - Edit existing lead
-  - Delete lead
-- Lead detail page with note-taking
-- Kanban-style pipeline board with drag-and-drop status updates
-- Keyboard shortcut support for quick lead creation
+- Login page with email/password credentials, session management, and deactivation handling.
+- Manager dashboard with KPIs, revenue charts, geographic lead map, and leaderboard.
+- Salesperson dashboard with personal pipeline and task overviews.
+- Leads list with filtering, inline status updates, and CSV export.
+- Lead detail page with notes, threaded messages, tasks, and lead metadata.
+- Pipeline board for drag-and-drop lead staging.
+- Task page for task creation, completion, and editing.
+- Team page for manager performance tracking and export.
+- Admin audit log and user management.
+- Settings page for profile updates, password changes, avatar upload, and demo refresh.
 
-## How to Run Locally
+## Getting Started
 
-**Prerequisites**
+### Prerequisites
 
-Node.js 18+
-A Supabase project (free tier works)
+- Node.js 18+
+- Supabase project
 
-1. **Clone and enter the project**
+### Install
 
 ```bash
 git clone https://github.com/SyedaMushfia/trackly-crm-app.git
 cd trackly-crm-app
-```
-
-2. **Install dependencies**
-
-```bash
 npm install
 ```
 
-3. **Create local environment file**
+### Configure
+
+Copy `.env.example` to `.env.local` and fill in your values.
 
 ```bash
-cp .env.local
+cp .env.example .env.local
 ```
 
-```powershell
-Copy-Item .env.local
-```
-
-4. **Fill environment variables** in `.env.local`  — see the Environment Variables section below.
-
-5. **Set up the database** — see the Database Setup section below.
-
-6. **Start development server**
+### Run
 
 ```bash
 npm run dev
 ```
 
-7. Open [http://localhost:3000] and log in with one of the test credentials.
+Open `http://localhost:3000`.
 
 ## Environment Variables
 
-  A `.env.example` file is committed to the repository with all required keys. Copy it to `.env.local` and fill in your values.
+Required variables in `.env.local`:
 
-- `DATABASE_URL`  
-  Postgres pooled connection string from Supabase.
+- `DATABASE_URL` — Supabase pooled Postgres URL.
+- `DIRECT_URL` — Supabase direct Postgres URL.
+- `AUTH_SECRET` — secret used by NextAuth.
+- `AUTH_URL` — app base URL (for local dev: `http://localhost:3000`).
+- `NEXT_PUBLIC_SUPABASE_URL` — Supabase project URL.
+- `SUPABASE_SERVICE_ROLE_KEY` — Supabase service-role key.
 
-- `DIRECT_URL`  
-  Direct (non-pooled) Postgres connection string from Supabase
+## Database Schema
 
-- `AUTH_SECRET`  
-  Random secret used by NextAuth to sign and encrypt session tokens. Generate one with: `openssl rand -base64 32`
+The app uses the following core schema.
 
-- `AUTH_URL`  
-  Public base URL of the app (for local dev: `http://localhost:3000`).
+```sql
+CREATE TYPE lead_status AS ENUM ('NEW', 'CONTACTED', 'QUALIFIED', 'PROPOSAL_SENT', 'WON', 'LOST');
+CREATE TYPE lead_source AS ENUM ('WEBSITE', 'LINKEDIN', 'REFERRAL', 'COLD_EMAIL', 'EVENT', 'OTHER');
+CREATE TYPE task_type AS ENUM ('call', 'email', 'follow_up', 'meeting', 'send_proposal', 'linkedin_outreach', 'internal', 'custom');
+CREATE TYPE action_type AS ENUM ('lead_created', 'lead_edited', 'lead_deleted', 'lead_reassigned', 'status_changed', 'note_added', 'task_completed', 'manager_message', 'manager_reply', 'user_created', 'user_deactivated', 'user_reactivated', 'password_reset');
+CREATE TYPE message_type AS ENUM ('manager_message', 'manager_reply');
+CREATE TYPE notification_type AS ENUM ('manager_message', 'manager_reply', 'task_due_today', 'follow_up_due');
 
-- `NEXT_PUBLIC_SUPABASE_URL`  
-  Your Supabase project URL
+CREATE TABLE users (
+  id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
+  name TEXT NOT NULL,
+  email TEXT UNIQUE NOT NULL,
+  password TEXT NOT NULL,
+  role TEXT NOT NULL,
+  active BOOLEAN NOT NULL DEFAULT TRUE,
+  avatar_url TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
 
-- `SUPABASE_SERVICE_ROLE_KEY`  
-  Supabase service-role key used by server-side API routes.
+CREATE TABLE leads (
+  id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
+  name TEXT NOT NULL,
+  company TEXT NOT NULL,
+  email TEXT NOT NULL,
+  phone TEXT,
+  source lead_source NOT NULL,
+  status lead_status NOT NULL DEFAULT 'NEW',
+  deal_value NUMERIC NOT NULL DEFAULT 0,
+  user_id TEXT NOT NULL REFERENCES users(id),
+  country TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
 
-## Database Setup
+CREATE TABLE notes (
+  id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
+  content TEXT NOT NULL,
+  lead_id TEXT NOT NULL REFERENCES leads(id) ON DELETE CASCADE,
+  user_id TEXT NOT NULL REFERENCES users(id),
+  is_system BOOLEAN NOT NULL DEFAULT FALSE,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
 
-This project uses Supabase Postgres. Follow these steps to get your database ready:
-  1. Create a Supabase project - Go to `supabase.com`, create a new project, and wait for it to provision.
-  2. Run the table schema - Open the SQL Editor in your Supabase dashboard and run the following:
+CREATE TABLE tasks (
+  id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
+  title TEXT NOT NULL,
+  type task_type NOT NULL,
+  due_date DATE NOT NULL,
+  lead_id TEXT NOT NULL REFERENCES leads(id),
+  created_by TEXT NOT NULL REFERENCES users(id),
+  assigned_to TEXT NOT NULL REFERENCES users(id),
+  completed BOOLEAN NOT NULL DEFAULT FALSE,
+  completed_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
 
-    ```sql 
-      -- Users table
-        CREATE TABLE users (
-          id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
-          name TEXT NOT NULL,
-          email TEXT UNIQUE NOT NULL,
-          password TEXT NOT NULL,
-          created_at TIMESTAMPTZ DEFAULT NOW(),
-          updated_at TIMESTAMPTZ DEFAULT NOW()
-        );
+CREATE TABLE messages (
+  id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
+  lead_id TEXT NOT NULL REFERENCES leads(id) ON DELETE CASCADE,
+  sender_id TEXT NOT NULL REFERENCES users(id),
+  message TEXT NOT NULL,
+  type message_type NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
 
-      -- Leads table
-        CREATE TABLE leads (
-          id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
-          name TEXT NOT NULL,
-          company TEXT NOT NULL,
-          email TEXT NOT NULL,
-          phone TEXT,
-          source lead_source NOT NULL,
-          status lead_status NOT NULL DEFAULT 'NEW',
-          deal_value NUMERIC NOT NULL DEFAULT 0,
-          user_id TEXT NOT NULL REFERENCES users(id),
-          created_at TIMESTAMPTZ DEFAULT NOW(),
-          updated_at TIMESTAMPTZ DEFAULT NOW()
-        );
+CREATE TABLE notifications (
+  id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
+  user_id TEXT NOT NULL REFERENCES users(id),
+  type notification_type NOT NULL,
+  title TEXT NOT NULL,
+  message TEXT NOT NULL,
+  link TEXT NOT NULL,
+  read BOOLEAN NOT NULL DEFAULT FALSE,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
 
-      -- Notes table
-        CREATE TABLE notes (
-          id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
-          content TEXT NOT NULL,
-          lead_id TEXT NOT NULL REFERENCES leads(id) ON DELETE CASCADE,
-          user_id TEXT NOT NULL REFERENCES users(id),
-          created_at TIMESTAMPTZ DEFAULT NOW()
-        );
-      ```
+CREATE TABLE activities (
+  id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
+  user_id TEXT NOT NULL REFERENCES users(id),
+  action_type action_type NOT NULL,
+  description TEXT NOT NULL,
+  lead_id TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+```
 
-  3. Seed test users- Run this in the SQL Editor to insert the five demo users with pre-hashed passwords:
-  
-      ```sql  
-        INSERT INTO users (id, name, email, password) VALUES
-        (gen_random_uuid()::text, 'Sarah Mitchell', 'sarah.mitchell@example.com', '$2b$12$IXe2zINZ6LmRDxSnhlM/Ru3AXvhV3gzLAoCWQOPBb/lCjOFLgEzN2'),
-        
-        (gen_random_uuid()::text, 'James Carter',   'james.carter@example.com',   '$2b$12$8fYigbg4hCqgKkTOQ03Ib.MX5eE9WCUfJPs9RsPkl7zH/LI0Tu5Mm'),
-  
-        (gen_random_uuid()::text, 'Priya Nair',     'priya.nair@example.com',     '$2b$12$PR9YVkB5JBo5fMm5sx5rAugo37YZOkOtdWPvS.edBgwVluy.M877a'),
-  
-        (gen_random_uuid()::text, 'Daniel Osei',    'daniel.osei@example.com',    '$2b$12$icZZYd729odi7Y6y9hht3ueMHBb.j4kFqnqROW2OoG7s0Ol043GQ2'),
-        
-        (gen_random_uuid()::text, 'Emily Zhang',    'emily.zhang@example.com',    '$2b$12$Fu9l.BlrhIR3aMMPLRrT4ONEAg9jzTmw999iFkl83llzO5maZn4ry');
-    ```
-  4. Copy your connection strings
-      In Supabase go to Project Settings and get the Connection string:
-  
-      - Copy the pooled connection string → DATABASE_URL
-      - Copy the direct connection string → DIRECT_URL
-  
-      In Project Settings → API:
-  
-      - Copy the Project URL → NEXT_PUBLIC_SUPABASE_URL
-      - Copy the service_role key → SUPABASE_SERVICE_ROLE_KEY
+## Routes & Access Control
 
+- `/login` — public login page.
+- `/dashboard` — authenticated landing page.
+- `/dashboard/leads` — lead list and export.
+- `/dashboard/leads/[id]` — lead detail workspace.
+- `/dashboard/pipeline` — salesperson-only pipeline board.
+- `/dashboard/tasks` — salesperson-only task list.
+- `/dashboard/team` — manager-only team performance.
+- `/dashboard/admin/audit-log` — manager-only audit log.
+- `/dashboard/admin/users` — manager-only user management.
+- `/dashboard/settings` — profile, password, avatar, and demo-data controls.
 
-## Test Login Credentials
+Route protection is implemented via `src/proxy.ts` and `src/lib/auth.ts`.
 
-  After seeding the database, use any of the following to log in:
-  
-  - sarah.mitchell@example.com      Sarah@2024!
-  - james.carter@example.com        James@2024!
-  - priya.nair@example.com          Priya@2024!
-  - daniel.osei@example.com         Daniel@2024!
-  - emily.zhang@example.com         Emily@2024!
+## Architecture Overview
 
-## Known Limitations
+- `src/lib/auth.ts` manages NextAuth credentials, JWT sessions, and active-user revalidation.
+- `src/types/next-auth.d.ts` extends NextAuth session/JWT types with `role`, `avatarUrl`, and `activeCheckedAt`.
+- `src/proxy.ts` is middleware that redirects unauthenticated users, prevents logged-in users from `/login`, and enforces manager-only routes.
+- `src/app/dashboard/page.tsx` renders either the manager or salesperson dashboard based on role.
+- `src/app/dashboard/leads/page.tsx` is the shared lead list with CSV export.
+- `src/app/dashboard/leads/[id]/page.tsx` provides lead detail, notes, message thread, and task section.
+- `src/app/dashboard/pipeline/page.tsx` and `src/app/dashboard/tasks/page.tsx` are salesperson-only experiences.
+- `src/app/dashboard/team/page.tsx` and `src/app/dashboard/admin/*` pages are manager-only.
 
-- No automated test suite configured yet.
-- Authorization is coarse-grained (authenticated users can access shared lead data).
-- No pagination for large lead lists.
-- Responsiveness — The app is optimised for desktop. 
+## Demo Credentials
 
-## Reflection
+- Admin: `admin@example.com` / `password123`
+- Salesperson: `alice@example.com` / `Alice@2026!`
+- Salesperson: `john@example.com` / `John@2026!`
+- Salesperson: `sarah@example.com` / `Sarah@2026!`
+- Salesperson: `michael@example.com` / `Michael@2026!`
+- Salesperson: `david@example.com` / `David@2026!`
+- Salesperson: `emma@example.com` / `Emma@2026!`
+- Salesperson: `daniel@example.com` / `Daniel@2026!`
+- Salesperson: `olivia@example.com` / `Olivia@2026!`
+- Salesperson: `james@example.com` / `James@2026!`
+- Salesperson: `sophia@example.com` / `Sophia@2026!`
 
-Trackly has a solid foundation: clear separation between UI and API layers, end-to-end TypeScript types from the database through to the frontend, and consistent schema validation with Zod at every API boundary. The next major improvements should focus on maintainability and production readiness:
+## Helpful Scripts
 
-1. Make the layout responsive on smaller screens.
-2. Introduce role-based access/ownership checks.
-3. Add automated tests (unit, API, and end-to-end).
-4. Introduce pagination on the leads list API.
+- `npm run dev` — start development server.
+- `npm run build` — build production output.
+- `npm run start` — run production server.
+- `npm run lint` — run ESLint.
+- `npm run db:types` — generate Supabase TypeScript types.
 
+## Notes
+
+- Supabase is instantiated in `src/lib/supabase.ts` using the public URL and service-role key.
+- Auth uses NextAuth credentials and stores role/active state in JWT session tokens.
+- The app includes a custom `src/components/ui` component layer and theme support.
+- CSV export helpers live in `src/lib/csv.ts`.
+- Settings page supports avatar upload, password changes, and demo data refresh.
