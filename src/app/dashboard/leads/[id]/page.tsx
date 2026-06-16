@@ -85,7 +85,6 @@ export default function LeadDetailPage() {
     }
   }, [id]);
 
-  const [pendingStatusChange, setPendingStatusChange] = useState<LeadStatus | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   async function fetchLead() {
@@ -115,7 +114,6 @@ export default function LeadDetailPage() {
       });
       if (!res.ok) throw new Error();
       toast.success("Status updated");
-      setPendingStatusChange(newStatus);
     } catch {
       toast.error("Failed to update status");
       setLead((prev) => prev ? { ...prev, status: prevStatus } : prev);
@@ -282,8 +280,6 @@ export default function LeadDetailPage() {
             leadName={lead.name}
             leadCompany={lead.company}
             isManager={isManager}
-            pendingStatusChange={pendingStatusChange}
-            onStatusPromptDismissed={() => setPendingStatusChange(null)}
           />
 
           {/* Notes */}
