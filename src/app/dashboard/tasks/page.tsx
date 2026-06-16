@@ -196,7 +196,7 @@ function TaskRow({
   return (
     <div
       className={cn(
-        "flex items-center gap-3 py-2.5 border-b last:border-0 transition-colors",
+        "flex items-start sm:items-center gap-2 sm:gap-3 py-2.5 border-b last:border-0 transition-colors",
         overdue && "bg-red-50/40",
         selected && "bg-[#18cb96]/5"
       )}
@@ -245,7 +245,7 @@ function TaskRow({
       </div>
 
       {/* Due date + desktop chips */}
-      <div className="flex items-center gap-2 flex-shrink-0">
+      <div className="hidden sm:flex items-center gap-2 flex-shrink-0">
         <span className={cn(
           "text-xs flex items-center gap-1",
           overdue ? "text-red-600 font-medium" : "text-muted-foreground"
@@ -316,7 +316,7 @@ function TaskSectionGroup({
   if (sectionKey === "overdue" && tasks.length === 0) return null;
 
   return (
-    <div className="bg-card border rounded-xl overflow-hidden">
+    <div className="bg-card border rounded-xl overflow-hidden w-full">
       <button
         onClick={toggle}
         className="w-full flex items-center justify-between px-5 py-3.5 hover:bg-muted/30 transition-colors"
@@ -418,16 +418,16 @@ function FullPageEmptyState() {
 
 function StatsBar({ stats }: { stats: Stats }) {
   return (
-    <div className="flex items-center bg-card border rounded-xl overflow-hidden divide-x">
-      <div className="flex-1 px-5 py-3 text-center">
+    <div className="grid grid-cols-1 sm:grid-cols-3 bg-card border rounded-xl overflow-hidden divide-y sm:divide-y-0 sm:divide-x">
+      <div className="px-3 sm:px-5 py-3 text-center">
         <p className="text-lg font-bold text-foreground">{stats.completedToday}</p>
         <p className="text-xs text-muted-foreground">Completed today</p>
       </div>
-      <div className="flex-1 px-5 py-3 text-center">
+      <div className="px-3 sm:px-5 py-3 text-center">
         <p className="text-lg font-bold text-foreground">{stats.completedThisWeek}</p>
         <p className="text-xs text-muted-foreground">Completed this week</p>
       </div>
-      <div className="flex-1 px-5 py-3 text-center">
+      <div className="px-3 sm:px-5 py-3 text-center">
         {stats.completionRate !== null ? (
           <>
             <p className="text-lg font-bold text-foreground">{stats.completionRate}%</p>
@@ -558,7 +558,7 @@ function TaskSlideOver({ task, open, onClose, onUpdate, onDelete }: SlideOverPro
     <Sheet open={open} onOpenChange={(o) => { if (!o) onClose(); }}>
       <SheetContent
         side="right"
-        className="w-full sm:w-[420px] sm:max-w-[420px] flex flex-col overflow-y-auto"
+        className="w-full sm:w-[420px] max-w-full flex flex-col overflow-y-auto"
       >
         <SheetHeader className="border-b pb-4">
           <SheetTitle className="sr-only">Task detail</SheetTitle>
@@ -713,8 +713,8 @@ function BulkActionBar({ count, onComplete, onReschedule, onDelete, onClear }: B
 
   return (
     <>
-      <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 bg-foreground text-background px-5 py-3 rounded-full shadow-2xl border border-border/20 animate-in slide-in-from-bottom-4 duration-200">
-        <span className="text-sm font-medium whitespace-nowrap">
+      <div className="fixed bottom-3 sm:bottom-6 left-3 right-3 sm:left-1/2 sm:right-auto sm:-translate-x-1/2 z-50 flex flex-wrap sm:flex-nowrap justify-center gap-2 sm:gap-3 bg-foreground text-background px-3 sm:px-5 py-3 rounded-xl sm:rounded-full shadow-2xl border border-border/20 animate-in slide-in-from-bottom-4 duration-200">
+        <span className="text-xs sm:text-sm font-medium whitespace-nowrap">
           {count} task{count !== 1 ? "s" : ""} selected
         </span>
 
@@ -841,7 +841,7 @@ function FilterBar({
   }
 
   return (
-    <div className="flex flex-wrap gap-2 items-center">
+    <div className="flex flex-col sm:flex-row flex-wrap gap-2 items-stretch sm:items-center">
       {/* Type multi-select */}
       <Popover>
         <PopoverTrigger asChild>
@@ -878,7 +878,7 @@ function FilterBar({
 
       {/* Lead */}
       <Select value={leadFilter} onValueChange={onLeadChange}>
-        <SelectTrigger className="h-8 w-44 text-sm"><SelectValue placeholder="All Leads" /></SelectTrigger>
+        <SelectTrigger className="h-8 w-full sm:w-44 text-sm"><SelectValue placeholder="All Leads" /></SelectTrigger>
         <SelectContent>
           <SelectItem value="ALL">All Leads</SelectItem>
           {leads.map((l) => <SelectItem key={l.id} value={l.id}>{l.name}</SelectItem>)}
@@ -887,7 +887,7 @@ function FilterBar({
 
       {/* Due date */}
       <Select value={dueDateFilter} onValueChange={onDueDateChange}>
-        <SelectTrigger className="h-8 w-36 text-sm"><SelectValue placeholder="All Dates" /></SelectTrigger>
+        <SelectTrigger className="h-8 w-full sm:w-36 text-sm"><SelectValue placeholder="All Dates" /></SelectTrigger>
         <SelectContent>
           <SelectItem value="ALL">All Dates</SelectItem>
           <SelectItem value="overdue">Overdue</SelectItem>
@@ -899,7 +899,7 @@ function FilterBar({
 
       {/* Status */}
       <Select value={statusFilter} onValueChange={onStatusChange}>
-        <SelectTrigger className="h-8 w-36 text-sm"><SelectValue /></SelectTrigger>
+        <SelectTrigger className="h-8 w-full sm:w-36 text-sm"><SelectValue /></SelectTrigger>
         <SelectContent>
           <SelectItem value="open">Open</SelectItem>
           <SelectItem value="completed">Completed</SelectItem>
@@ -1138,7 +1138,7 @@ function MyTasksPageInner() {
   const SECTIONS: SectionKey[] = ["overdue", "today", "week", "later"];
 
   return (
-    <div className="p-3 space-y-5  pb-24">
+    <div className="p-3 sm:p-4 lg:p-6 space-y-4 sm:space-y-5 pb-28">
       {/* Header */}
       <div>
         <p className="text-sm text-muted-foreground mt-0.5 ml-3">

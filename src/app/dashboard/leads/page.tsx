@@ -159,7 +159,6 @@ function LeadsPageInner() {
     fetchLeads();
   }, [fetchLeads]);
 
-  // Inline status change — calls dedicated /status route
   async function handleInlineStatusChange(leadId: string, newStatus: LeadStatus) {
     setLeads((prev) =>
       prev.map((l) => (l.id === leadId ? { ...l, status: newStatus } : l))
@@ -178,10 +177,7 @@ function LeadsPageInner() {
     }
   }
 
-  // When filters change reset to page 1
-  function handleFilterChange(
-    s: string, st: string, so: string, u: string
-  ) {
+  function handleFilterChange(s: string, st: string, so: string, u: string) {
     setSearch(s);
     setStatusFilter(st);
     setSourceFilter(so);
@@ -211,39 +207,39 @@ function LeadsPageInner() {
     <>
       <KeyboardShortcuts onNewLead={() => setCreateOpen(true)} />
 
-      <div className="p-3 space-y-3">
+      <div className="p-3 sm:p-4 space-y-3 sm:space-y-4">
         {/* Header */}
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="text-sm text-muted-foreground ml-3 -mt-4">
-              {isLoading
-                ? "Loading..."
-                : `${pagination?.total ?? 0} lead${pagination?.total !== 1 ? "s" : ""}`}
-              {hasActiveFilters && " (filtered)"}
-            </p>
-          </div>
+        <div className="flex items-center justify-between gap-2">
+          <p className="text-sm text-muted-foreground ml-1 sm:ml-3">
+            {isLoading
+              ? "Loading..."
+              : `${pagination?.total ?? 0} lead${pagination?.total !== 1 ? "s" : ""}`}
+            {hasActiveFilters && " (filtered)"}
+          </p>
           <div className="flex items-center gap-2">
-            <Button variant="outline" onClick={handleExport} disabled={isExporting}>
+            <Button variant="outline" size="sm" onClick={handleExport} disabled={isExporting}>
               {isExporting ? (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                <Loader2 className="mr-0 sm:mr-2 h-4 w-4 animate-spin" />
               ) : (
-                <Download className="mr-2 h-4 w-4" />
+                <Download className="mr-0 sm:mr-2 h-4 w-4" />
               )}
-              Export CSV
+              <span className="hidden sm:inline">Export CSV</span>
             </Button>
-            <Button onClick={() => setCreateOpen(true)}>
-              <Plus className="mr-2 h-4 w-4" />
-              Add Lead
+            <Button size="sm" onClick={() => setCreateOpen(true)}>
+              <Plus className="mr-1 sm:mr-2 h-4 w-4" />
+              <span className="hidden xs:inline">Add Lead</span>
+              <span className="xs:hidden">Add</span>
               {!isManager && (
-                <kbd className="ml-2 text-xs bg-card/20 px-1.5 py-0.5 rounded font-mono">N</kbd>
+                <kbd className="ml-2 text-xs bg-card/20 px-1.5 py-0.5 rounded font-mono hidden sm:inline">N</kbd>
               )}
             </Button>
           </div>
         </div>
 
         {/* Filters */}
-        <div className="flex flex-wrap gap-3 items-center">
-          <div className="relative flex-1 min-w-[200px]">
+        <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:gap-3 sm:items-center">
+          {/* Search — full width on mobile */}
+          <div className="relative w-full sm:flex-1 sm:min-w-[180px]">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
               placeholder="Search name, company, email..."
@@ -252,75 +248,82 @@ function LeadsPageInner() {
               onChange={(e) => handleFilterChange(e.target.value, statusFilter, sourceFilter, userFilter)}
             />
           </div>
-          <Select
-            value={statusFilter}
-            onValueChange={(v) => handleFilterChange(search, v, sourceFilter, userFilter)}
-          >
-            <SelectTrigger className="w-44">
-              <SelectValue placeholder="All Statuses" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="ALL">All Statuses</SelectItem>
-              {ALL_STATUSES.map((s) => (
-                <SelectItem key={s} value={s}>
-                  {statusConfig[s].label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Select
-            value={sourceFilter}
-            onValueChange={(v) => handleFilterChange(search, statusFilter, v, userFilter)}
-          >
-            <SelectTrigger className="w-40">
-              <SelectValue placeholder="All Sources" />
-            </SelectTrigger>
-            <SelectContent>
-              {sourceOptions.map((s) => (
-                <SelectItem key={s} value={s}>
-                  {s === "ALL"
-                    ? "All Sources"
-                    : s.toLowerCase().replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          {isManager && (
+
+          {/* Filter selects — 2-up on mobile, inline on sm+ */}
+          <div className="grid grid-cols-2 gap-2 sm:contents">
             <Select
-              value={userFilter}
-              onValueChange={(v) => handleFilterChange(search, statusFilter, sourceFilter, v)}
+              value={statusFilter}
+              onValueChange={(v) => handleFilterChange(search, v, sourceFilter, userFilter)}
             >
-              <SelectTrigger className="w-44">
-                <SelectValue placeholder="All Salespeople" />
+              <SelectTrigger className="w-full sm:w-40">
+                <SelectValue placeholder="All Statuses" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="ALL">All Salespeople</SelectItem>
-                {users.map((u) => (
-                  <SelectItem key={u.id} value={u.id}>{u.name}</SelectItem>
+                <SelectItem value="ALL">All Statuses</SelectItem>
+                {ALL_STATUSES.map((s) => (
+                  <SelectItem key={s} value={s}>
+                    {statusConfig[s].label}
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
-          )}
+
+            <Select
+              value={sourceFilter}
+              onValueChange={(v) => handleFilterChange(search, statusFilter, v, userFilter)}
+            >
+              <SelectTrigger className="w-full sm:w-36">
+                <SelectValue placeholder="All Sources" />
+              </SelectTrigger>
+              <SelectContent>
+                {sourceOptions.map((s) => (
+                  <SelectItem key={s} value={s}>
+                    {s === "ALL"
+                      ? "All Sources"
+                      : s.toLowerCase().replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            {isManager && (
+              <Select
+                value={userFilter}
+                onValueChange={(v) => handleFilterChange(search, statusFilter, sourceFilter, v)}
+              >
+                <SelectTrigger className="w-full sm:w-44 col-span-2 sm:col-span-1">
+                  <SelectValue placeholder="All Salespeople" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="ALL">All Salespeople</SelectItem>
+                  {users.map((u) => (
+                    <SelectItem key={u.id} value={u.id}>{u.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+          </div>
+
           {hasActiveFilters && (
-            <Button variant="ghost" size="sm" className="text-muted-foreground" onClick={clearAllFilters}>
+            <Button variant="ghost" size="sm" className="text-muted-foreground w-full sm:w-auto" onClick={clearAllFilters}>
               <X className="mr-1 h-3 w-3" />
-              Clear
+              Clear filters
             </Button>
           )}
         </div>
 
-        {/* Table */}
-        <div className="border rounded-lg bg-card overflow-hidden">
-          <Table>
+        {/* Table — horizontally scrollable on mobile */}
+        <div className="border rounded-lg bg-card overflow-x-auto">
+          <Table className="min-w-[640px]">
             <TableHeader>
               <TableRow className="bg-muted/30">
                 <TableHead>Lead</TableHead>
-                <TableHead>Company</TableHead>
-                <TableHead>Source</TableHead>
+                <TableHead className="hidden sm:table-cell">Company</TableHead>
+                <TableHead className="hidden md:table-cell">Source</TableHead>
                 <TableHead>Status</TableHead>
-                <TableHead>Deal Value</TableHead>
-                <TableHead>Salesperson</TableHead>
-                <TableHead>Last Updated</TableHead>
+                <TableHead className="hidden sm:table-cell">Deal Value</TableHead>
+                <TableHead className="hidden lg:table-cell">Salesperson</TableHead>
+                <TableHead className="hidden md:table-cell">Last Updated</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
@@ -342,31 +345,38 @@ function LeadsPageInner() {
               ) : (
                 leads.map((lead) => (
                   <TableRow key={lead.id} className="hover:bg-muted/30 group">
+                    {/* Lead name + email — always visible */}
                     <TableCell>
                       <div className="flex items-start gap-2">
-                        <div>
+                        <div className="min-w-0">
                           <Link
                             href={`/dashboard/leads/${lead.id}`}
-                            className="font-medium text-foreground hover:text-[#18cb96] hover:underline"
+                            className="font-medium text-foreground hover:text-[#18cb96] hover:underline truncate block"
                           >
                             {lead.name}
                           </Link>
-                          <p className="text-xs text-muted-foreground">{lead.email}</p>
+                          <p className="text-xs text-muted-foreground truncate">{lead.email}</p>
+                          {/* Company shown inline on mobile */}
+                          <p className="text-xs text-muted-foreground sm:hidden truncate">{lead.company}</p>
                         </div>
                         {isOverdue(lead.updated_at) && (
-                          <span className="flex items-center gap-1 text-xs text-red-600 bg-red-50 px-2 py-0.5 rounded-full whitespace-nowrap mt-0.5">
+                          <span className="flex items-center gap-1 text-xs text-red-600 bg-red-50 px-1.5 py-0.5 rounded-full whitespace-nowrap mt-0.5 flex-shrink-0">
                             <AlertCircle className="h-3 w-3" />
-                            Overdue
+                            <span className="hidden sm:inline">Overdue</span>
                           </span>
                         )}
                       </div>
                     </TableCell>
-                    <TableCell className="text-sm text-muted-foreground">{lead.company}</TableCell>
-                    <TableCell className="text-sm text-muted-foreground">
+
+                    <TableCell className="text-sm text-muted-foreground hidden sm:table-cell">
+                      {lead.company}
+                    </TableCell>
+
+                    <TableCell className="text-sm text-muted-foreground hidden md:table-cell">
                       {lead.source.toLowerCase().replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())}
                     </TableCell>
 
-                    {/* Status — read-only badge for managers, dropdown for salespeople */}
+                    {/* Status */}
                     <TableCell>
                       {isManager ? (
                         <StatusBadge status={lead.status} />
@@ -393,32 +403,32 @@ function LeadsPageInner() {
                       )}
                     </TableCell>
 
-                    <TableCell className="font-medium">
+                    <TableCell className="font-medium hidden sm:table-cell">
                       ${Number(lead.deal_value).toLocaleString()}
                     </TableCell>
-                    <TableCell className="text-sm text-muted-foreground">
+
+                    <TableCell className="text-sm text-muted-foreground hidden lg:table-cell">
                       {lead.users?.name ?? "—"}
                     </TableCell>
-                    <TableCell className="text-sm text-muted-foreground">
+
+                    <TableCell className="text-sm text-muted-foreground hidden md:table-cell">
                       {new Date(lead.updated_at).toLocaleDateString()}
                     </TableCell>
 
                     {/* Actions */}
                     <TableCell>
-                      <div className="flex justify-end items-center gap-1">
-                        {/* Quick note — available to both roles */}
+                      <div className="flex justify-end items-center gap-0.5 sm:gap-1">
                         <QuickNotePopover
                           leadId={lead.id}
                           leadName={lead.name}
                           onSuccess={fetchLeads}
                         />
 
-                        {/* Reassign — manager only */}
                         {isManager && (
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="text-muted-foreground hover:text-purple-700 hover:bg-purple-50"
+                            className="text-muted-foreground hover:text-purple-700 hover:bg-purple-50 hidden sm:inline-flex"
                             title="Reassign lead"
                             onClick={() => setReassignLead(lead)}
                           >
@@ -426,7 +436,6 @@ function LeadsPageInner() {
                           </Button>
                         )}
 
-                        {/* Edit — both roles */}
                         <Button
                           variant="ghost"
                           size="icon"
@@ -437,19 +446,17 @@ function LeadsPageInner() {
                           <Pencil className="h-4 w-4" />
                         </Button>
 
-                        {/* View detail */}
                         <Link href={`/dashboard/leads/${lead.id}`}>
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="text-muted-foreground hover:text-foreground"
+                            className="text-muted-foreground hover:text-foreground hidden sm:inline-flex"
                             title="View lead details"
                           >
                             <ExternalLink className="h-4 w-4" />
                           </Button>
                         </Link>
 
-                        {/* Delete — both roles */}
                         <Button
                           variant="ghost"
                           size="icon"
@@ -470,13 +477,14 @@ function LeadsPageInner() {
 
         {/* Pagination */}
         {pagination && pagination.totalPages > 1 && (
-          <div className="flex items-center justify-between mt-10">
-            <p className="text-sm text-muted-foreground">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mt-4">
+            <p className="text-sm text-muted-foreground text-center sm:text-left">
               Showing {(pagination.page - 1) * pagination.pageSize + 1}–
               {Math.min(pagination.page * pagination.pageSize, pagination.total)} of{" "}
               {pagination.total}
             </p>
-            <div className="flex items-center gap-2">
+
+            <div className="flex items-center justify-center gap-1 sm:gap-2">
               <Button
                 variant="outline"
                 size="sm"
@@ -484,7 +492,7 @@ function LeadsPageInner() {
                 disabled={page <= 1}
               >
                 <ChevronLeft className="h-4 w-4" />
-                Previous
+                <span className="hidden sm:inline ml-1">Previous</span>
               </Button>
 
               <div className="flex gap-1">
@@ -493,7 +501,7 @@ function LeadsPageInner() {
                     (p) =>
                       p === 1 ||
                       p === pagination.totalPages ||
-                      Math.abs(p - page) <= 2
+                      Math.abs(p - page) <= 1
                   )
                   .reduce<(number | "...")[]>((acc, p, idx, arr) => {
                     if (idx > 0 && p - (arr[idx - 1] as number) > 1) acc.push("...");
@@ -502,7 +510,7 @@ function LeadsPageInner() {
                   }, [])
                   .map((item, idx) =>
                     item === "..." ? (
-                      <span key={`ellipsis-${idx}`} className="px-2 text-muted-foreground flex items-center">…</span>
+                      <span key={`ellipsis-${idx}`} className="px-1 text-muted-foreground flex items-center text-sm">…</span>
                     ) : (
                       <Button
                         key={item}
@@ -523,7 +531,7 @@ function LeadsPageInner() {
                 onClick={() => handlePageChange(page + 1)}
                 disabled={page >= pagination.totalPages}
               >
-                Next
+                <span className="hidden sm:inline mr-1">Next</span>
                 <ChevronRight className="h-4 w-4" />
               </Button>
             </div>

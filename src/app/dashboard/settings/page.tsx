@@ -188,22 +188,22 @@ export default function SettingsPage() {
   // ── Render ────────────────────────────────────────────────────────────────
 
   return (
-    <div className="p-4 space-y-6">
+    <div className="p-3 sm:p-4 lg:p-6 space-y-6">
 
       <p className="text-sm text-muted-foreground ml-3">Manage your account and preferences</p>
 
       {/* ── Profile + Password side by side ── */}
-      <div className="flex gap-5 items-start">
+      <div className="flex flex-col lg:flex-row gap-5 items-stretch lg:items-start">
 
         {/* Profile */}
         <div className="flex-1 min-w-0">
           <SectionCard title="Profile">
 
             {/* Avatar row */}
-            <div className="flex items-center gap-4 pb-2 border-b">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 pb-2 border-b">
               <Avatar src={session?.user?.avatarUrl} name={session?.user?.name} size="lg" />
               <div className="space-y-2">
-                <div className="flex gap-2">
+                <div className="flex flex-wrap gap-2">
                   <Button
                     type="button" variant="outline" size="sm"
                     onClick={() => fileInputRef.current?.click()}
@@ -236,9 +236,9 @@ export default function SettingsPage() {
             {/* Name */}
             <form onSubmit={nameForm.handleSubmit(handleNameSave)} className="space-y-1">
               <label className="block text-sm font-medium text-foreground">Name</label>
-              <div className="flex gap-2">
+              <div className="flex flex-col sm:flex-row gap-2">
                 <Input {...nameForm.register("name")} placeholder="Your name" className="flex-1" />
-                <Button type="submit" variant="outline" size="sm" disabled={nameForm.formState.isSubmitting} className="shrink-0">
+                <Button type="submit" variant="outline" size="sm" disabled={nameForm.formState.isSubmitting} className="shrink-0 w-full sm:w-auto">
                   {nameForm.formState.isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : "Save"}
                 </Button>
               </div>
@@ -248,9 +248,9 @@ export default function SettingsPage() {
             {/* Email */}
             <form onSubmit={emailForm.handleSubmit(handleEmailSave)} className="space-y-1">
               <label className="block text-sm font-medium text-foreground">Email</label>
-              <div className="flex gap-2">
+              <div className="flex flex-col sm:flex-row gap-2">
                 <Input {...emailForm.register("email")} type="email" placeholder="you@example.com" className="flex-1" />
-                <Button type="submit" variant="outline" size="sm" disabled={emailForm.formState.isSubmitting} className="shrink-0">
+                <Button type="submit" variant="outline" size="sm" disabled={emailForm.formState.isSubmitting} className="shrink-0 w-full sm:w-auto">
                   {emailForm.formState.isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : "Save"}
                 </Button>
               </div>
@@ -258,7 +258,7 @@ export default function SettingsPage() {
             </form>
 
             {/* Role */}
-            <div className="flex items-center justify-between pt-1">
+            <div className="flex items-center justify-between gap-3 pt-1">
               <span className="text-sm font-medium text-foreground">Role</span>
               <Badge className="bg-muted text-foreground capitalize hover:bg-muted">
                 {session?.user?.role}
@@ -306,14 +306,14 @@ export default function SettingsPage() {
       {/* ── Demo Tools (manager only) ── */}
       {isManager && (
         <SectionCard title="Demo Tools">
-          <div className="flex items-center justify-between gap-4">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <div>
               <p className="text-sm font-medium text-foreground">Refresh lead timestamps</p>
               <p className="text-xs text-muted-foreground mt-0.5">
                 Resets lead activity timestamps with realistic dates to prevent all leads from appearing overdue after extended inactivity.
               </p>
             </div>
-            <Button variant="outline" size="sm" className="flex-shrink-0" onClick={() => setResetOpen(true)}>
+            <Button variant="outline" size="sm" className="flex-shrink-0 w-full sm:w-auto" onClick={() => setResetOpen(true)}>
               <RotateCcw className="mr-2 h-4 w-4" />
               Reset Demo Data
             </Button>
@@ -323,7 +323,7 @@ export default function SettingsPage() {
 
       {/* Confirm dialog */}
       <AlertDialog open={resetOpen} onOpenChange={setResetOpen}>
-        <AlertDialogContent>
+        <AlertDialogContent className="w-[calc(100%-2rem)] max-w-md">
           <AlertDialogHeader>
             <AlertDialogTitle>Reset demo data?</AlertDialogTitle>
           </AlertDialogHeader>

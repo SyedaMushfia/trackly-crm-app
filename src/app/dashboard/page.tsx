@@ -138,7 +138,7 @@ function SalesPipelineKpis({ kpi }: { kpi: ManagerStats["kpi"] }) {
   ];
 
   return (
-    <div className="relative overflow-hidden rounded-2xl p-6 flex-1
+    <div className="relative overflow-hidden rounded-2xl p-5 sm:p-6 flex-1
                     bg-white dark:bg-card
                     border border-black/[0.04] dark:border-white/[0.06]
                     shadow-sm">
@@ -150,24 +150,25 @@ function SalesPipelineKpis({ kpi }: { kpi: ManagerStats["kpi"] }) {
         }}
       />
 
-      <div className="relative z-10 mb-6">
+      <div className="relative z-10 mb-5 sm:mb-6">
         <p className="text-base font-bold text-foreground">Sales Pipeline KPIs</p>
         <p className="text-xs text-muted-foreground mt-0.5">Current performance overview</p>
       </div>
 
       <div className="relative z-10 divide-y divide-border">
-        <div className="grid grid-cols-3 gap-x-8 pb-8">
+        {/* On mobile: 2-col grid for all 6; on sm+: 3-col split across two rows */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-4 sm:gap-x-8 gap-y-4 pb-6 sm:pb-8">
           {metrics.slice(0, 3).map((m) => (
             <div key={m.label}>
-              <p className="text-2xl font-semibold text-foreground leading-tight numeric-font">{m.value}</p>
+              <p className="text-xl sm:text-2xl font-semibold text-foreground leading-tight numeric-font">{m.value}</p>
               <p className="text-xs text-muted-foreground mt-0.5">{m.label}</p>
             </div>
           ))}
         </div>
-        <div className="grid grid-cols-3 gap-x-8 pt-8 pb-4">
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-4 sm:gap-x-8 gap-y-4 pt-6 sm:pt-8 pb-4">
           {metrics.slice(3).map((m) => (
             <div key={m.label}>
-              <p className="text-2xl font-semibold text-foreground leading-tight numeric-font">{m.value}</p>
+              <p className="text-xl sm:text-2xl font-semibold text-foreground leading-tight numeric-font">{m.value}</p>
               <p className="text-xs text-muted-foreground mt-0.5">{m.label}</p>
             </div>
           ))}
@@ -196,14 +197,16 @@ function InsightCards({ kpi }: { kpi: ManagerStats["kpi"] }) {
   ];
 
   return (
-    <div className="flex flex-col gap-4">
+    /* On mobile: horizontal row side-by-side; on md: vertical column */
+    <div className="flex flex-row gap-3 md:flex-col md:gap-4 md:w-auto">
       {cards.map(({ label, value, subtitle, icon: Icon, accent }) => (
         <div
           key={label}
-          className="relative overflow-hidden rounded-2xl p-4 flex flex-col justify-between min-h-[110px]
+          className="relative overflow-hidden rounded-2xl p-4 flex flex-col justify-between
+                     min-h-[100px] flex-1
                      bg-white dark:bg-card
                      border border-black/[0.04] dark:border-white/[0.06]
-                     shadow-sm flex-1"
+                     shadow-sm"
         >
           {/* Gradient overlay */}
           <div
@@ -214,20 +217,20 @@ function InsightCards({ kpi }: { kpi: ManagerStats["kpi"] }) {
           />
 
           {/* Icon top-right */}
-          <div className="absolute top-5 right-3 z-10">
-            <Icon style={{ color: accent }} className="h-8 w-8 opacity-80" />
+          <div className="absolute top-4 right-3 z-10">
+            <Icon style={{ color: accent }} className="h-6 w-6 sm:h-8 sm:w-8 opacity-80" />
           </div>
 
-          {/* Value + Label stacked top-left */}
-          <div className="relative z-10 flex flex-col gap-0.5 pr-6">
-            <p className="text-2xl numeric-font font-semibold text-foreground leading-tight tracking-tight numeric-font">
+          {/* Value + Label */}
+          <div className="relative z-10 flex flex-col gap-0.5 pr-8">
+            <p className="text-lg sm:text-2xl numeric-font font-semibold text-foreground leading-tight tracking-tight">
               {value}
             </p>
             <p className="text-xs text-muted-foreground leading-snug">{label}</p>
-            <p className="text-xs text-muted-foreground/70 leading-snug">{subtitle}</p>
+            <p className="hidden sm:block text-xs text-muted-foreground/70 leading-snug">{subtitle}</p>
           </div>
 
-          {/* Accent pill at bottom-left */}
+          {/* Accent pill */}
           <div
             className="relative z-10 mt-3 h-1 w-8 rounded-full"
             style={{ backgroundColor: accent, opacity: 0.5 }}
@@ -270,37 +273,42 @@ function ManagerDashboard({ userName }: { userName: string }) {
 
   const { kpi, bySource, revenueOverTime, topPerformers } = data;
 
-  console.log("locations", data.locations);
-
   return (
-    <div className="p-3 space-y-3">
+    <div className="p-3 sm:p-4 space-y-3 sm:space-y-4">
+      {/* Header */}
       <div className="flex items-center justify-between">
-        <div>
-          <p className="text-sm text-muted-foreground ml-3 -mt-3">Team performance overview</p>
-        </div>
+        <p className="text-sm text-muted-foreground ml-1 sm:ml-3">Team performance overview</p>
         <Button variant="outline" size="sm" onClick={() => handleExportManager(data)}>
           <Download className="mr-2 h-4 w-4" />
-          Export CSV
+          <span className="hidden sm:inline">Export CSV</span>
+          <span className="sm:hidden">Export</span>
         </Button>
       </div>
-      <div className="flex gap-3">
-        <div className="flex flex-col gap-3 w-2/3">
-          <div className="flex gap-3">
+
+      {/* KPI row: stacked on mobile, side-by-side on lg */}
+      <div className="flex flex-col gap-3 lg:flex-row lg:gap-3">
+        <div className="flex flex-col gap-3 lg:w-2/3">
+          {/* KPI cards + insight cards: stacked on sm, row on md */}
+          <div className="flex flex-col gap-3 md:flex-row md:gap-3">
             <SalesPipelineKpis kpi={kpi} />
             <InsightCards kpi={kpi} />
           </div>
-          <div className="flex gap-4">
-            <div className="bg-card border rounded-xl p-5 w-1/2">
+
+          {/* Charts: stacked on sm, side-by-side on md */}
+          <div className="flex flex-col gap-3 sm:flex-row sm:gap-4">
+            <div className="bg-card border rounded-xl p-5 flex-1">
               <p className="text-sm font-semibold text-foreground mb-4">Leads by Source</p>
               <LeadsBySourceChart data={bySource} />
             </div>
-            <div className="bg-card border rounded-xl p-5 w-1/2">
+            <div className="bg-card border rounded-xl p-5 flex-1">
               <p className="text-sm font-semibold text-foreground mb-4">Won Revenue Over Time</p>
               <RevenueLineChart data={revenueOverTime} />
             </div>
           </div>
         </div>
-        <div className="flex flex-col gap-4 w-1/3">
+
+        {/* Right column: map + top performers — full width on mobile, 1/3 on lg */}
+        <div className="flex flex-col gap-4 lg:w-1/3">
           <LocationsMap markers={data.locations.markers} topCountries={data.locations.topCountries} />
           <div className="bg-card border rounded-xl p-5 flex-shrink-0">
             <p className="text-sm font-semibold text-foreground mb-4">Top Performers This Month</p>
@@ -407,7 +415,8 @@ function KpiCards({ kpi }: { kpi: SalespersonKPI }) {
   ];
 
   return (
-    <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-5">
+    /* 2 cols on mobile → 3 on sm → 5 on xl */
+    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-5">
       {cards.map(({ label, value, icon: Icon, accent }) => (
         <div
           key={label}
@@ -416,28 +425,21 @@ function KpiCards({ kpi }: { kpi: SalespersonKPI }) {
                      border border-black/[0.04] dark:border-white/[0.06]
                      shadow-sm"
         >
-          {/* Gradient layer — transparent base so card bg shows through */}
           <div
             className="absolute inset-0 pointer-events-none"
             style={{
               background: `radial-gradient(ellipse at 120% 120%, ${accent}30 0%, ${accent}12 50%, transparent 100%)`,
             }}
           />
-
-          {/* Icon top-right, no background */}
           <div className="absolute top-5 right-3 z-10">
-            <Icon style={{ color: accent }} className="h-8 w-8 opacity-80" />
+            <Icon style={{ color: accent }} className="h-6 w-6 sm:h-8 sm:w-8 opacity-80" />
           </div>
-
-          {/* Value + Label stacked top-left */}
           <div className="relative z-10 flex flex-col gap-0.5 pr-6">
-            <p className="text-2xl numeric-font font-semibold text-foreground leading-tight tracking-tight">
+            <p className="text-xl sm:text-2xl numeric-font font-semibold text-foreground leading-tight tracking-tight">
               {value}
             </p>
             <p className="text-xs text-muted-foreground leading-snug">{label}</p>
           </div>
-
-          {/* Accent pill at bottom-left */}
           <div
             className="relative z-10 mt-3 h-1 w-8 rounded-full"
             style={{ backgroundColor: accent, opacity: 0.5 }}
@@ -702,7 +704,7 @@ function PipelineBreakdownWidget({ stages }: { stages: PipelineStage[] }) {
         ))}
       </div>
 
-      <div className="grid grid-cols-2 gap-x-6 gap-y-3 pt-4 border-t">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 gap-x-6 gap-y-3 pt-4 border-t">
         {stages.map((stage) => (
           <StageBarChart
             key={stage.status}
@@ -827,26 +829,27 @@ function SalespersonDashboard({ userId, userName }: { userId: string; userName: 
   const { kpi, winLossMonth, pipelineBreakdown, overdueLeads, upcomingTasks } = data;
 
   return (
-    <div className="p-3 space-y-3">
+    <div className="p-3 sm:p-4 space-y-3 sm:space-y-4">
       {/* Header */}
       <div className="flex items-start justify-between">
-        <div>
-          <p className="text-sm text-muted-foreground ml-4">Here&apos;s your pipeline at a glance.</p>
-        </div>
+        <p className="text-sm text-muted-foreground ml-1 sm:ml-4">Here&apos;s your pipeline at a glance.</p>
         <Button variant="outline" size="sm" onClick={() => handleExportSalesperson(data)}>
           <Download className="mr-2 h-4 w-4" />
-          Export CSV
+          <span className="hidden sm:inline">Export CSV</span>
+          <span className="sm:hidden">Export</span>
         </Button>
       </div>
 
       <KpiCards kpi={kpi} />
 
+      {/* Win/Loss + Tasks + Overdue: stacked on mobile, 3-col on md */}
       <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
         <WinLossWidget won={winLossMonth.won} lost={winLossMonth.lost} />
         <UpcomingTasksWidget tasks={upcomingTasks ?? []} />
         <OverdueLeadsWidget leads={overdueLeads} />
       </div>
 
+      {/* Pipeline + Leaderboard: stacked on mobile, 2-col on lg */}
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <PipelineBreakdownWidget stages={pipelineBreakdown} />
         <LeaderboardWidget userId={userId} />

@@ -134,14 +134,14 @@ export default function UserManagementPage() {
   const managers = users.filter((u) => u.role === "manager");
 
   return (
-    <div className="p-3 space-y-3">
-      <div className="flex items-center justify-between">
+    <div className="p-3 sm:p-4 lg:p-6 space-y-4">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
         <div>
           <p className="text-sm text-muted-foreground ml-3 -mt-3">
             {salespeople.length} salesperson{salespeople.length !== 1 ? "s" : ""}
           </p>
         </div>
-        <Button onClick={() => setCreateOpen(true)}>
+        <Button onClick={() => setCreateOpen(true)} className="w-full sm:w-auto">
           <Plus className="mr-2 h-4 w-4" />
           Add Salesperson
         </Button>
@@ -153,7 +153,7 @@ export default function UserManagementPage() {
           <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-3">
             Managers
           </h2>
-          <div className="border rounded-lg bg-card overflow-hidden">
+          <div className="border rounded-lg bg-card overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow className="bg-muted/30">
@@ -189,7 +189,7 @@ export default function UserManagementPage() {
         <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-3">
           Salespeople
         </h2>
-        <div className="border rounded-lg bg-card overflow-hidden">
+        <div className="border rounded-lg bg-card overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow className="bg-muted/30">
@@ -233,7 +233,7 @@ export default function UserManagementPage() {
                       {new Date(user.created_at).toLocaleDateString()}
                     </TableCell>
                     <TableCell>
-                      <div className="flex justify-end gap-2">
+                      <div className="flex justify-start sm:justify-end gap-2">
                         <Button
                           variant="ghost"
                           size="sm"

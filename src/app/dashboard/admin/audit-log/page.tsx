@@ -251,7 +251,7 @@ function AuditLogPageInner() {
   }
 
   return (
-    <div className="p-3 space-y-3">
+    <div className="p-3 sm:p-4 lg:p-6 space-y-4">
       {/* Header */}
       <div>
         <p className="text-sm text-muted-foreground ml-3">
@@ -262,11 +262,11 @@ function AuditLogPageInner() {
       </div>
 
       {/* Filters */}
-      <div className="flex flex-wrap gap-3 items-start">
+      <div className="flex flex-col sm:flex-row flex-wrap gap-3 items-stretch sm:items-start">
 
         {/* User filter */}
         <Select value={userFilter} onValueChange={handleUserChange}>
-          <SelectTrigger className="w-48">
+          <SelectTrigger className="w-full sm:w-48">
             <SelectValue placeholder="All Users" />
           </SelectTrigger>
           <SelectContent>
@@ -282,7 +282,7 @@ function AuditLogPageInner() {
         {/* Action type multi-select */}
         <Popover>
           <PopoverTrigger asChild>
-            <Button variant="outline" className="w-52 justify-between">
+            <Button variant="outline" className="w-full sm:w-52 justify-between">
               <span className="truncate">
                 {selectedActions.length === 0
                   ? "All Action Types"
@@ -290,7 +290,7 @@ function AuditLogPageInner() {
                   ? ACTION_TYPES.find((a) => a.value === selectedActions[0])?.label
                   : `${selectedActions.length} types selected`}
               </span>
-              <ChevronLeft className="ml-2 h-4 w-4 rotate-[-90deg] opacity-50 shrink-0" />
+              <ChevronLeft className="ml-2 h-4 w-4 -rotate-[-90deg] opacity-50 shrink-0" />
             </Button>
           </PopoverTrigger>
           <PopoverContent className="w-56 p-2" align="start">
@@ -334,7 +334,7 @@ function AuditLogPageInner() {
             <Button
               variant="outline"
               className={cn(
-                "w-60 justify-start text-left font-normal",
+                "w-full sm:w-60 justify-start text-left font-normal",
                 !dateRange?.from && "text-muted-foreground"
               )}
             >
@@ -367,7 +367,7 @@ function AuditLogPageInner() {
       </div>
 
       {/* Table */}
-      <div className="border rounded-lg bg-card overflow-hidden">
+      <div className="border rounded-lg bg-card overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow className="bg-muted/30">
@@ -423,13 +423,13 @@ function AuditLogPageInner() {
 
       {/* Pagination */}
       {pagination && pagination.totalPages > 1 && (
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <p className="text-sm text-muted-foreground">
             Showing {(pagination.page - 1) * pagination.pageSize + 1}–
             {Math.min(pagination.page * pagination.pageSize, pagination.total)} of{" "}
             {pagination.total}
           </p>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <Button
               variant="outline"
               size="sm"

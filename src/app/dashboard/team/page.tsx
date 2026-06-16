@@ -58,7 +58,6 @@ export default function TeamPage() {
       setSortDir((d) => (d === "asc" ? "desc" : "asc"));
     } else {
       setSortKey(key);
-      // Numeric columns default to desc (highest first), name defaults to asc
       setSortDir(key === "name" ? "asc" : "desc");
     }
   }
@@ -91,40 +90,39 @@ export default function TeamPage() {
     downloadCSV(`team-performance-${todayStr()}.csv`, rowsToCSV(headers, rows));
   }
 
-  const columns: { key: SortKey; label: string; className?: string }[] = [
-    { key: "name", label: "Name" },
-    { key: "open_leads", label: "Open Leads", className: "text-right" },
-    { key: "won_this_month", label: "Won This Month", className: "text-right" },
-    { key: "won_revenue_this_month", label: "Revenue This Month", className: "text-right" },
-    { key: "leads_closed_this_month", label: "Closed This Month", className: "text-right" },
-    { key: "win_rate_all_time", label: "Win Rate (All Time)", className: "text-right" },
+  const columns: { key: SortKey; label: string; className?: string; hideOn?: string }[] = [
+    { key: "name",                    label: "Name" },
+    { key: "open_leads",              label: "Open Leads",       className: "text-right", hideOn: "hidden sm:table-cell" },
+    { key: "won_this_month",          label: "Won This Month",   className: "text-right", hideOn: "hidden md:table-cell" },
+    { key: "won_revenue_this_month",  label: "Revenue This Month", className: "text-right" },
+    { key: "leads_closed_this_month", label: "Closed This Month", className: "text-right", hideOn: "hidden md:table-cell" },
+    { key: "win_rate_all_time",       label: "Win Rate",         className: "text-right", hideOn: "hidden sm:table-cell" },
   ];
 
   return (
-    <div className="p-3 space-y-3">
+    <div className="p-3 sm:p-4 space-y-3 sm:space-y-4">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <p className="text-sm text-muted-foreground ml-3 -mt-3">
-            {isLoading ? "Loading..." : `${members.length} salesperson${members.length !== 1 ? "s" : ""}`}
-          </p>
-        </div>
+      <div className="flex items-center justify-between gap-2">
+        <p className="text-sm text-muted-foreground ml-1 sm:ml-3">
+          {isLoading ? "Loading..." : `${members.length} salesperson${members.length !== 1 ? "s" : ""}`}
+        </p>
         <Button variant="outline" size="sm" onClick={handleExport} disabled={isLoading || members.length === 0}>
-          <Download className="mr-2 h-4 w-4" />
-          Export CSV
+          <Download className="mr-0 sm:mr-2 h-4 w-4" />
+          <span className="hidden sm:inline">Export CSV</span>
         </Button>
       </div>
 
-      <div className="border rounded-lg bg-card overflow-hidden">
-        <Table>
+      {/* Table — scrollable on mobile */}
+      <div className="border rounded-lg bg-card overflow-x-auto">
+        <Table className="min-w-[480px]">
           <TableHeader>
             <TableRow className="bg-muted/30">
               {/* Expand toggle column */}
-              <TableHead className="w-10" />
+              <TableHead className="w-8 sm:w-10" />
               {columns.map((col) => (
                 <TableHead
                   key={col.key}
-                  className={col.className}
+                  className={`${col.className ?? ""} ${col.hideOn ?? ""}`}
                 >
                   <button
                     onClick={() => handleSort(col.key)}
@@ -160,17 +158,23 @@ export default function TeamPage() {
                     className="hover:bg-muted/30 cursor-pointer"
                     onClick={() => toggleExpand(member.id)}
                   >
-                    <TableCell className="w-10">
+                    <TableCell className="w-8 sm:w-10">
                       {expandedId === member.id
                         ? <ChevronDown className="h-4 w-4 text-muted-foreground" />
                         : <ChevronRight className="h-4 w-4 text-muted-foreground" />
                       }
                     </TableCell>
+
+                    {/* Name — always visible */}
                     <TableCell className="font-medium text-foreground">
                       <div className="flex items-center gap-2">
-                        <div>
-                          {member.name}
-                          <p className="text-xs text-muted-foreground font-normal">{member.email}</p>
+                        <div className="min-w-0">
+                          <p className="truncate">{member.name}</p>
+                          <p className="text-xs text-muted-foreground font-normal truncate">{member.email}</p>
+                          {/* Show revenue inline on mobile where some cols are hidden */}
+                          <p className="text-xs text-muted-foreground font-normal sm:hidden">
+                            ${member.won_revenue_this_month.toLocaleString()} · <WinRatePill rate={member.win_rate_all_time} inline />
+                          </p>
                         </div>
                         {member.unreadReplies && (
                           <button
@@ -187,19 +191,20 @@ export default function TeamPage() {
                         )}
                       </div>
                     </TableCell>
-                    <TableCell className="text-right tabular-nums">
+
+                    <TableCell className="text-right tabular-nums hidden sm:table-cell">
                       {member.open_leads}
                     </TableCell>
-                    <TableCell className="text-right tabular-nums">
+                    <TableCell className="text-right tabular-nums hidden md:table-cell">
                       {member.won_this_month}
                     </TableCell>
                     <TableCell className="text-right tabular-nums font-medium">
                       ${member.won_revenue_this_month.toLocaleString()}
                     </TableCell>
-                    <TableCell className="text-right tabular-nums">
+                    <TableCell className="text-right tabular-nums hidden md:table-cell">
                       {member.leads_closed_this_month}
                     </TableCell>
-                    <TableCell className="text-right">
+                    <TableCell className="text-right hidden sm:table-cell">
                       <WinRatePill rate={member.win_rate_all_time} />
                     </TableCell>
                   </TableRow>
@@ -224,11 +229,19 @@ export default function TeamPage() {
 
 // ── Win rate pill ──────────────────────────────────────────────────────────────
 
-function WinRatePill({ rate }: { rate: number }) {
+function WinRatePill({ rate, inline = false }: { rate: number; inline?: boolean }) {
   const color =
     rate >= 60 ? "bg-emerald-100 text-emerald-700"
     : rate >= 35 ? "bg-yellow-100 text-yellow-700"
     : "bg-muted text-muted-foreground";
+
+  if (inline) {
+    return (
+      <span className={`inline-block px-1.5 py-0 rounded text-xs font-medium tabular-nums ${color}`}>
+        {rate}%
+      </span>
+    );
+  }
 
   return (
     <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium tabular-nums ${color}`}>
@@ -242,26 +255,26 @@ function WinRatePill({ rate }: { rate: number }) {
 function ExpandedLeads({ member }: { member: TeamMember }) {
   if (member.leads.length === 0) {
     return (
-      <div className="px-8 py-6 text-sm text-muted-foreground">
+      <div className="px-6 py-6 text-sm text-muted-foreground">
         No leads assigned to {member.name}.
       </div>
     );
   }
 
   return (
-    <div className="px-6 py-3 border-t border-border">
+    <div className="px-3 sm:px-6 py-3 border-t border-border overflow-x-auto">
       <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">
         {member.leads.length} lead{member.leads.length !== 1 ? "s" : ""}
       </p>
-      <table className="w-full text-sm">
+      <table className="w-full text-sm min-w-[400px]">
         <thead>
           <tr className="text-xs text-muted-foreground border-b border-border">
             <th className="text-left pb-2 font-medium">Lead</th>
-            <th className="text-left pb-2 font-medium">Company</th>
+            <th className="text-left pb-2 font-medium hidden sm:table-cell">Company</th>
             <th className="text-left pb-2 font-medium">Status</th>
             <th className="text-right pb-2 font-medium">Deal Value</th>
-            <th className="text-right pb-2 font-medium">Last Activity</th>
-            <th className="w-8" />
+            <th className="text-right pb-2 font-medium hidden sm:table-cell">Last Activity</th>
+            <th className="w-6 sm:w-8" />
           </tr>
         </thead>
         <tbody>
@@ -270,23 +283,25 @@ function ExpandedLeads({ member }: { member: TeamMember }) {
               key={lead.id}
               className="border-b border-border last:border-0 hover:bg-card/60 transition-colors"
             >
-              <td className="py-2 pr-4">
+              <td className="py-2 pr-3 sm:pr-4">
                 <Link
                   href={`/dashboard/leads/${lead.id}`}
-                  className="font-medium text-foreground hover:text-[#18cb96] hover:underline"
+                  className="font-medium text-foreground hover:text-[#18cb96] hover:underline block truncate max-w-[120px] sm:max-w-none"
                   onClick={(e) => e.stopPropagation()}
                 >
                   {lead.name}
                 </Link>
+                {/* Company shown inline on mobile */}
+                <p className="text-xs text-muted-foreground sm:hidden truncate">{lead.company}</p>
               </td>
-              <td className="py-2 pr-4 text-muted-foreground">{lead.company}</td>
-              <td className="py-2 pr-4">
+              <td className="py-2 pr-3 sm:pr-4 text-muted-foreground hidden sm:table-cell">{lead.company}</td>
+              <td className="py-2 pr-3 sm:pr-4">
                 <StatusBadge status={lead.status as import("@/types").LeadStatus} />
               </td>
-              <td className="py-2 pr-4 text-right tabular-nums font-medium text-foreground">
+              <td className="py-2 pr-3 sm:pr-4 text-right tabular-nums font-medium text-foreground whitespace-nowrap">
                 ${lead.deal_value.toLocaleString()}
               </td>
-              <td className="py-2 pr-4 text-right text-muted-foreground tabular-nums">
+              <td className="py-2 pr-3 sm:pr-4 text-right text-muted-foreground tabular-nums hidden sm:table-cell whitespace-nowrap">
                 {new Date(lead.last_activity).toLocaleDateString()}
               </td>
               <td className="py-2 text-right">

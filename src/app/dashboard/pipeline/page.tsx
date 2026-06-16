@@ -108,21 +108,21 @@ export default function PipelinePage() {
   }
 
   return (
-    <div className="p-3 space-y-6">
+    <div className="p-3 sm:p-4 lg:p-6 space-y-4 sm:space-y-6">
       <div>
         <p className="text-sm text-muted-foreground ml-3">
           Drag leads between columns to update their status
         </p>
       </div>
 
-      <div className="overflow-x-auto pb-4">
+      <div className="overflow-x-auto pb-4 -mx-3 px-3 sm:mx-0 sm:px-0">
         <DndContext
           sensors={sensors}
           collisionDetection={closestCorners}
           onDragStart={handleDragStart}
           onDragEnd={handleDragEnd}
         >
-          <div className="flex gap-4 min-w-max">
+          <div className="flex gap-3 sm:gap-4 min-w-max">
             {ALL_STATUSES.map((status) => (
               <KanbanColumn
                 key={status}
@@ -135,7 +135,7 @@ export default function PipelinePage() {
 
           <DragOverlay>
             {activeCard ? (
-              <div className="rotate-2 scale-105">
+              <div className="rotate-2 scale-95 sm:scale-105 max-w-[85vw]">
                 <KanbanCard lead={activeCard} onNoteAdded={() => {}} />
               </div>
             ) : null}
