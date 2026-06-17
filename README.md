@@ -2,6 +2,13 @@
 
 Trackly is a full-stack customer relationship management application built with Next.js App Router, Supabase, and NextAuth. It supports manager and salesperson workflows with lead management, tasks, notes, messaging, pipeline staging, team metrics, export, and admin audit logging.
 
+## Preview
+
+https://github.com/user-attachments/assets/af757408-6bfb-451d-b92b-f4589f91ed8d
+
+## Live Demo 
+https://trackly-crm-app.vercel.app/login
+
 ## Table of Contents
 
 - Project Overview
